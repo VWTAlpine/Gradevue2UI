@@ -111,11 +111,12 @@ export function AppSidebar() {
         )}
         <Link href="/profile" data-testid="link-profile">
           <div className="flex flex-col items-center gap-3 rounded-lg p-3 hover-elevate active-elevate-2 cursor-pointer">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 shrink-0">
               {studentInfo?.photo && studentInfo.photo.length > 10 && (
                 <AvatarImage 
                   src={studentInfo.photo.startsWith("data:") ? studentInfo.photo : (studentInfo.photo.startsWith("/9j") || studentInfo.photo.match(/^[A-Za-z0-9+/=]+$/) ? `data:image/jpeg;base64,${studentInfo.photo}` : studentInfo.photo)} 
-                  alt={studentInfo.name || "Student"} 
+                  alt={studentInfo.name || "Student"}
+                  className="object-cover"
                 />
               )}
               <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">

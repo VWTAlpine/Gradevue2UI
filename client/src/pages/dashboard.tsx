@@ -3,7 +3,7 @@ import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Bell, X } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AttendanceSummary {
@@ -116,6 +116,17 @@ export default function DashboardPage() {
     }
   };
 
+  const getMonthLabels = () => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const result: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push(months[d.getMonth()]);
+    }
+    return result;
+  };
+
   const generateTrendData = () => {
     const base = averageGrade || 85;
     return Array.from({ length: 7 }, (_, i) => 
@@ -123,6 +134,7 @@ export default function DashboardPage() {
     );
   };
 
+  const monthLabels = getMonthLabels();
   const gpaTrendData = generateTrendData().map(v => (v / 100) * 4);
   const gradeTrendData = generateTrendData();
 
@@ -138,7 +150,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-3" data-testid="stats-grid">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
         <StatCard
           title="Overall GPA"
           value={gpa.toFixed(2)}
@@ -146,6 +158,9 @@ export default function DashboardPage() {
           chartData={gpaTrendData}
           chartColor="#3b82f6"
           showChartBackground
+          showAxes
+          yAxisDomain={[0, 4]}
+          xAxisLabels={monthLabels}
           testId="stat-overall-gpa"
         />
         <StatCard
@@ -155,6 +170,9 @@ export default function DashboardPage() {
           chartData={gradeTrendData}
           chartColor="#10b981"
           showChartBackground
+          showAxes
+          yAxisDomain={[0, 100]}
+          xAxisLabels={monthLabels}
           testId="stat-average-grade"
         />
         <div className="flex flex-col gap-4">
@@ -182,6 +200,15 @@ export default function DashboardPage() {
             />
           </div>
         </div>
+        <StatCard
+          title="Term"
+          value={reportingPeriod.name || "Current"}
+          subtitle={reportingPeriod.endDate ? `Ends ${formatDate(reportingPeriod.endDate)}` : ""}
+          icon={Calendar}
+          iconBgColor="bg-amber-100 dark:bg-amber-900/30"
+          iconColor="text-amber-600 dark:text-amber-400"
+          testId="stat-current-term"
+        />
       </div>
 
       {gradeChanges.length > 0 && (

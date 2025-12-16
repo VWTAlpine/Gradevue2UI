@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 interface StatCardProps {
   title: string;
@@ -13,6 +13,9 @@ interface StatCardProps {
   chartData?: number[];
   chartColor?: string;
   showChartBackground?: boolean;
+  showAxes?: boolean;
+  yAxisDomain?: [number, number];
+  xAxisLabels?: string[];
   size?: "default" | "compact" | "mini";
 }
 
@@ -27,9 +30,16 @@ export function StatCard({
   chartData,
   chartColor = "#10b981",
   showChartBackground = false,
+  showAxes = false,
+  yAxisDomain,
+  xAxisLabels,
   size = "default",
 }: StatCardProps) {
-  const formattedChartData = chartData?.map((val, idx) => ({ value: val, idx }));
+  const formattedChartData = chartData?.map((val, idx) => ({ 
+    value: val, 
+    idx,
+    label: xAxisLabels?.[idx] || ""
+  }));
 
   if (size === "mini") {
     return (
@@ -86,9 +96,28 @@ export function StatCard({
           )}
         </div>
         {formattedChartData && formattedChartData.length > 0 && (
-          <div className={`mt-3 h-16 w-full rounded-md ${showChartBackground ? "bg-muted/50 p-2" : ""}`}>
+          <div className={`mt-3 w-full rounded-md ${showChartBackground ? "bg-muted/50 p-2" : ""} ${showAxes ? "h-24" : "h-16"}`}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={formattedChartData}>
+              <LineChart data={formattedChartData} margin={showAxes ? { left: 0, right: 5, top: 5, bottom: 5 } : undefined}>
+                {showAxes && (
+                  <>
+                    <XAxis 
+                      dataKey="label" 
+                      tick={{ fontSize: 9 }} 
+                      axisLine={{ stroke: "#e5e7eb" }}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      domain={yAxisDomain || ["auto", "auto"]}
+                      ticks={yAxisDomain?.[1] === 4 ? [1, 2, 3, 4] : yAxisDomain?.[1] === 100 ? [25, 50, 75, 100] : undefined}
+                      tick={{ fontSize: 9 }}
+                      axisLine={{ stroke: "#e5e7eb" }}
+                      tickLine={false}
+                      width={22}
+                    />
+                  </>
+                )}
                 <Line
                   type="monotone"
                   dataKey="value"
