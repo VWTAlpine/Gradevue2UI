@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@shared/schema";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
@@ -17,49 +16,40 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
   const gradePercentage = course.grade ?? 0;
 
   return (
-    <Card className="overflow-visible transition-all" data-testid={`card-course-${index}`}>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
-        <div className="space-y-1">
-          <h3 className="font-semibold leading-tight">{course.name}</h3>
-          <p className="text-sm text-muted-foreground">
-            {course.teacher} {course.period ? `Period ${course.period}` : ""}
-          </p>
-        </div>
+    <Card className="overflow-visible" data-testid={`card-course-${index}`}>
+      <CardHeader className="flex flex-row items-start justify-between gap-2 pb-3">
+        <h3 className="font-semibold leading-tight line-clamp-2">{course.name}</h3>
         <Badge
-          className={`shrink-0 text-base font-bold ${getGradeBgColor(course.letterGrade)}`}
+          className={`shrink-0 text-sm font-bold ${getGradeBgColor(course.letterGrade)}`}
         >
           {course.letterGrade}
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Current Grade:</p>
-          <p className={`text-4xl font-bold ${getGradeColor(course.letterGrade)}`} data-testid={`grade-percentage-${index}`}>
-            {gradePercentage.toFixed(1)}%
-          </p>
+      <CardContent className="space-y-4 pt-0">
+        <div className="text-sm text-muted-foreground">
+          <p>{course.teacher || "Teacher"}</p>
+          <p>Period {course.period || "N/A"}</p>
         </div>
 
-        <Progress value={gradePercentage} className="h-2" />
+        <div className="flex items-baseline justify-between gap-2 pt-2">
+          <span className="text-sm text-muted-foreground">Current Grade:</span>
+          <span className={`text-3xl font-bold ${getGradeColor(course.letterGrade)}`} data-testid={`grade-percentage-${index}`}>
+            {gradePercentage.toFixed(1)}%
+          </span>
+        </div>
 
-        {course.categories && course.categories.length > 0 && (
-          <div className="space-y-2">
-            {course.categories.slice(0, 3).map((category, catIndex) => (
-              <div key={catIndex} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {category.name} ({category.weight}%)
-                </span>
-                <span className="font-medium">{category.score.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <Link href={`/course/${index}`} onClick={() => onSelect?.(course)}>
-          <Button variant="ghost" className="w-full justify-between" data-testid={`button-view-course-${index}`}>
-            View Details
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </Link>
+        <div className="pt-3 border-t border-emerald-500">
+          <Link href={`/course/${index}`} onClick={() => onSelect?.(course)}>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between text-emerald-600 dark:text-emerald-400" 
+              data-testid={`button-view-course-${index}`}
+            >
+              View Details
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

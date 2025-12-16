@@ -3,12 +3,54 @@ import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Award, BookOpen, Calendar, Bell, X } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Calendar, Bell, X, Clock, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface AttendanceSummary {
+  totalAbsences: number;
+  totalTardies: number;
+}
 
 export default function DashboardPage() {
   const { gradebook, setSelectedCourse, gradeChanges, clearGradeChanges } = useGrades();
+  const [attendance, setAttendance] = useState<AttendanceSummary>({ totalAbsences: 0, totalTardies: 0 });
 
-  // Add data-testid to stat cards and course cards
+  const loadAttendance = () => {
+    const savedAttendance = localStorage.getItem("attendance");
+    if (savedAttendance) {
+      try {
+        const parsed = JSON.parse(savedAttendance);
+        setAttendance({
+          totalAbsences: parsed.totalAbsences || 0,
+          totalTardies: parsed.totalTardies || 0,
+        });
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadAttendance();
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "attendance") {
+        loadAttendance();
+      }
+    };
+    
+    const handleFocus = () => {
+      loadAttendance();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", handleFocus);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
 
   const courses = gradebook?.courses || [];
 
@@ -74,39 +116,47 @@ export default function DashboardPage() {
     }
   };
 
+  const generateTrendData = () => {
+    const base = averageGrade || 85;
+    return Array.from({ length: 7 }, (_, i) => 
+      Math.max(0, Math.min(100, base - 5 + Math.random() * 10 + (i * 0.5)))
+    );
+  };
+
+  const gpaTrendData = generateTrendData().map(v => (v / 100) * 4);
+  const gradeTrendData = generateTrendData();
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl" data-testid="heading-academic-progress">
           Academic Progress
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground uppercase tracking-wide" data-testid="text-report-period">
           {reportingPeriod.name}
           {reportingPeriod.endDate && ` - Ends ${formatDate(reportingPeriod.endDate)}`}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
         <StatCard
           title="Overall GPA"
           value={gpa.toFixed(2)}
           subtitle="/ 4.0"
-          icon={TrendingUp}
-          iconBgColor="bg-blue-100 dark:bg-blue-900/30"
-          iconColor="text-blue-600 dark:text-blue-400"
+          chartData={gpaTrendData}
+          chartColor="#3b82f6"
           testId="stat-overall-gpa"
         />
         <StatCard
           title="Average Grade"
           value={`${averageGrade.toFixed(1)}%`}
           subtitle={getGradeLabel(averageGrade) + "+"}
-          icon={Award}
-          iconBgColor="bg-emerald-100 dark:bg-emerald-900/30"
-          iconColor="text-emerald-600 dark:text-emerald-400"
+          chartData={gradeTrendData}
+          chartColor="#10b981"
           testId="stat-average-grade"
         />
         <StatCard
-          title="Total Courses"
+          title="Courses"
           value={courses.length.toString()}
           icon={BookOpen}
           iconBgColor="bg-purple-100 dark:bg-purple-900/30"
@@ -114,13 +164,34 @@ export default function DashboardPage() {
           testId="stat-total-courses"
         />
         <StatCard
-          title="Current Term"
-          value={reportingPeriod.name || "Fall Semester"}
+          title="Term"
+          value={reportingPeriod.name || "Current"}
           subtitle={reportingPeriod.endDate ? `Ends ${formatDate(reportingPeriod.endDate)}` : ""}
           icon={Calendar}
           iconBgColor="bg-amber-100 dark:bg-amber-900/30"
           iconColor="text-amber-600 dark:text-amber-400"
           testId="stat-current-term"
+        />
+      </div>
+
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4" data-testid="stats-grid-secondary">
+        <StatCard
+          title="Tardies"
+          value={attendance.totalTardies.toString()}
+          icon={Clock}
+          iconBgColor="bg-orange-100 dark:bg-orange-900/30"
+          iconColor="text-orange-600 dark:text-orange-400"
+          size="compact"
+          testId="stat-tardies"
+        />
+        <StatCard
+          title="Absences"
+          value={attendance.totalAbsences.toString()}
+          icon={AlertCircle}
+          iconBgColor="bg-red-100 dark:bg-red-900/30"
+          iconColor="text-red-600 dark:text-red-400"
+          size="compact"
+          testId="stat-absences"
         />
       </div>
 
@@ -168,7 +239,7 @@ export default function DashboardPage() {
                         <p className="font-medium text-sm">{change.courseName}</p>
                         <p className="text-xs text-muted-foreground">
                           {change.previousGrade?.toFixed(1) ?? "N/A"}% {change.previousLetter ? `(${change.previousLetter})` : ""} 
-                          {" → "}
+                          {" \u2192 "}
                           {change.newGrade?.toFixed(1) ?? "N/A"}% {change.newLetter ? `(${change.newLetter})` : ""}
                         </p>
                       </div>

@@ -23,6 +23,8 @@ import {
   Settings,
   LogOut,
   GraduationCap,
+  TrendingUp,
+  Building,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -45,6 +47,11 @@ const mainNavItems = [
     title: "Attendance",
     url: "/attendance",
     icon: Calendar,
+  },
+  {
+    title: "Term Comparison",
+    url: "/term-comparison",
+    icon: TrendingUp,
   },
   {
     title: "Settings",
@@ -94,6 +101,14 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 space-y-3">
+        {studentInfo?.school && (
+          <div className="flex items-center gap-2 text-center justify-center pb-2 border-b border-sidebar-border">
+            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium truncate" data-testid="text-school-name">
+              {studentInfo.school}
+            </span>
+          </div>
+        )}
         <Link href="/profile" data-testid="link-profile">
           <div className="flex flex-col items-center gap-3 rounded-lg p-3 hover-elevate active-elevate-2 cursor-pointer">
             <Avatar className="h-16 w-16">
@@ -112,7 +127,7 @@ export function AppSidebar() {
                 {studentInfo?.name || "Student"}
               </p>
               <p className="text-sm text-muted-foreground" data-testid="text-student-info">
-                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}{studentInfo?.school ? ` - ${studentInfo.school}` : ""}
+                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}
               </p>
               {studentInfo?.studentId && (
                 <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-student-id">
