@@ -211,96 +211,98 @@ export default function GPACalculatorPage() {
             {entries.map((entry, index) => (
               <div
                 key={entry.id}
-                className="grid gap-4 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-6"
+                className="flex flex-col gap-4 rounded-lg border bg-card p-4"
               >
-                <div className="lg:col-span-2">
-                  <Label htmlFor={`course-${entry.id}`} className="text-xs">
-                    Course Name
-                  </Label>
-                  <Input
-                    id={`course-${entry.id}`}
-                    value={entry.courseName}
-                    onChange={(e) =>
-                      updateEntry(entry.id, "courseName", e.target.value)
-                    }
-                    placeholder="Enter course name"
-                    className="mt-1"
-                    data-testid={`input-course-name-${index}`}
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Grade</Label>
-                  <Select
-                    value={entry.letterGrade}
-                    onValueChange={(value) =>
-                      updateEntry(entry.id, "letterGrade", value)
-                    }
-                  >
-                    <SelectTrigger className="mt-1" data-testid={`select-grade-${index}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gradeOptions.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          {grade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor={`credits-${entry.id}`} className="text-xs">
-                    Credits
-                  </Label>
-                  <Input
-                    id={`credits-${entry.id}`}
-                    type="number"
-                    min="0.5"
-                    max="5"
-                    step="0.5"
-                    value={entry.credits}
-                    onChange={(e) =>
-                      updateEntry(entry.id, "credits", parseFloat(e.target.value) || 1)
-                    }
-                    className="mt-1"
-                    data-testid={`input-credits-${index}`}
-                  />
-                </div>
-
-                <div className="flex items-end gap-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`ap-${entry.id}`}
-                      checked={entry.isAP}
-                      onCheckedChange={(checked) => {
-                        updateEntry(entry.id, "isAP", checked);
-                        if (checked) updateEntry(entry.id, "isHonors", false);
-                      }}
-                      data-testid={`switch-ap-${index}`}
-                    />
-                    <Label htmlFor={`ap-${entry.id}`} className="text-xs">
-                      AP
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="sm:col-span-2">
+                    <Label htmlFor={`course-${entry.id}`} className="text-xs">
+                      Course Name
                     </Label>
+                    <Input
+                      id={`course-${entry.id}`}
+                      value={entry.courseName}
+                      onChange={(e) =>
+                        updateEntry(entry.id, "courseName", e.target.value)
+                      }
+                      placeholder="Enter course name"
+                      className="mt-1"
+                      data-testid={`input-course-name-${index}`}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id={`honors-${entry.id}`}
-                      checked={entry.isHonors}
-                      onCheckedChange={(checked) => {
-                        updateEntry(entry.id, "isHonors", checked);
-                        if (checked) updateEntry(entry.id, "isAP", false);
-                      }}
-                      data-testid={`switch-honors-${index}`}
-                    />
-                    <Label htmlFor={`honors-${entry.id}`} className="text-xs">
-                      Honors
+
+                  <div>
+                    <Label className="text-xs">Grade</Label>
+                    <Select
+                      value={entry.letterGrade}
+                      onValueChange={(value) =>
+                        updateEntry(entry.id, "letterGrade", value)
+                      }
+                    >
+                      <SelectTrigger className="mt-1" data-testid={`select-grade-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {gradeOptions.map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`credits-${entry.id}`} className="text-xs">
+                      Credits
                     </Label>
+                    <Input
+                      id={`credits-${entry.id}`}
+                      type="number"
+                      min="0.5"
+                      max="5"
+                      step="0.5"
+                      value={entry.credits}
+                      onChange={(e) =>
+                        updateEntry(entry.id, "credits", parseFloat(e.target.value) || 1)
+                      }
+                      className="mt-1"
+                      data-testid={`input-credits-${index}`}
+                    />
                   </div>
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`ap-${entry.id}`}
+                        checked={entry.isAP}
+                        onCheckedChange={(checked) => {
+                          updateEntry(entry.id, "isAP", checked);
+                          if (checked) updateEntry(entry.id, "isHonors", false);
+                        }}
+                        data-testid={`switch-ap-${index}`}
+                      />
+                      <Label htmlFor={`ap-${entry.id}`} className="text-xs">
+                        AP
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`honors-${entry.id}`}
+                        checked={entry.isHonors}
+                        onCheckedChange={(checked) => {
+                          updateEntry(entry.id, "isHonors", checked);
+                          if (checked) updateEntry(entry.id, "isAP", false);
+                        }}
+                        data-testid={`switch-honors-${index}`}
+                      />
+                      <Label htmlFor={`honors-${entry.id}`} className="text-xs">
+                        Honors
+                      </Label>
+                    </div>
+                  </div>
+
                   <Button
                     variant="ghost"
                     size="icon"

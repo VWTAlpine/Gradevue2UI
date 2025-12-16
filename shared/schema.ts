@@ -18,6 +18,8 @@ export const assignmentSchema = z.object({
   score: z.string(),
   scoreType: z.string().optional(),
   points: z.string(),
+  pointsEarned: z.number().nullable().optional(),
+  pointsPossible: z.number().nullable().optional(),
   notes: z.string().optional(),
   description: z.string().optional(),
 });

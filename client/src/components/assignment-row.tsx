@@ -11,6 +11,14 @@ interface AssignmentRowProps {
 
 export function AssignmentRow({ assignment, showCourse, courseName, index = 0 }: AssignmentRowProps) {
   const parseScore = () => {
+    // First try the new numeric fields
+    if (assignment.pointsEarned !== null && assignment.pointsEarned !== undefined &&
+        assignment.pointsPossible !== null && assignment.pointsPossible !== undefined) {
+      const earned = assignment.pointsEarned;
+      const max = assignment.pointsPossible;
+      return { earned, max, percentage: max > 0 ? (earned / max) * 100 : null };
+    }
+    
     const score = assignment.score;
     const points = assignment.points;
     

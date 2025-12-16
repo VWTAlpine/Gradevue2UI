@@ -23,8 +23,6 @@ import {
   Settings,
   LogOut,
   GraduationCap,
-  Layers,
-  User,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -47,11 +45,6 @@ const mainNavItems = [
     title: "Attendance",
     url: "/attendance",
     icon: Calendar,
-  },
-  {
-    title: "Term Comparison",
-    url: "/terms",
-    icon: Layers,
   },
   {
     title: "Settings",

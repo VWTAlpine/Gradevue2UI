@@ -188,14 +188,25 @@ export function parseAttendance(attendance: any): ParsedAttendance {
       // Determine status based on reason text
       let status = "Absent";
       const reasonLower = reason.toLowerCase();
-      if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+      const noteLower = note.toLowerCase();
+      
+      if (reasonLower.includes("tardy") || reasonLower.includes("late") ||
+          noteLower.includes("tardy") || noteLower.includes("late")) {
         status = "Tardy";
         totalTardies++;
-      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || 
+                 reasonLower.includes("doctor") || reasonLower.includes("medical") ||
+                 noteLower.includes("excused") || noteLower.includes("field trip")) {
         status = "Excused";
         totalExcused++;
         totalAbsences++;
+      } else if (reasonLower.includes("unexcused") || noteLower.includes("unexcused")) {
+        status = "Unexcused";
+        totalAbsences++;
+        totalUnexcused++;
       } else {
+        // Default: treat as generic absence (unexcused if no explicit label)
+        status = "Absent";
         totalAbsences++;
         totalUnexcused++;
       }
@@ -252,6 +263,7 @@ export interface ParsedGradebook {
     address: string;
     birthDate: string;
     counselor: string;
+    photo: string;
   } | null;
 }
 
@@ -275,6 +287,8 @@ export interface ParsedAssignment {
   score: string;
   scoreType: string;
   points: string;
+  pointsEarned: number | null;
+  pointsPossible: number | null;
   notes: string;
   description: string;
 }
@@ -323,16 +337,45 @@ export function parseGradebook(gradebook: any, studentInfo: any = null): ParsedG
       
       for (const assignment of assignmentList) {
         if (!assignment) continue;
+        
+        // Extract points earned/possible from multiple possible sources
+        let pointsEarned: number | null = null;
+        let pointsPossible: number | null = null;
+        
+        // Try Point/PointPossible fields first (from GitHub code structure)
+        if (assignment.Point !== undefined || assignment._Point !== undefined) {
+          pointsEarned = parseFloat(assignment.Point || assignment._Point) || null;
+        }
+        if (assignment.PointPossible !== undefined || assignment._PointPossible !== undefined) {
+          pointsPossible = parseFloat(assignment.PointPossible || assignment._PointPossible) || null;
+        }
+        
+        // Fallback: parse from _Points string like "8/10" or "8 / 10"
+        const pointsStr = assignment._Points || "";
+        if ((pointsEarned === null || pointsPossible === null) && pointsStr.includes("/")) {
+          const parts = pointsStr.split("/").map((p: string) => p.trim());
+          if (parts.length === 2) {
+            if (pointsEarned === null) {
+              pointsEarned = parseFloat(parts[0]) || null;
+            }
+            if (pointsPossible === null) {
+              pointsPossible = parseFloat(parts[1]) || null;
+            }
+          }
+        }
+        
         assignments.push({
-          name: assignment._Measure || "Untitled Assignment",
-          type: assignment._Type || "Assignment",
-          date: assignment._Date || "",
-          dueDate: assignment._DueDate || "",
-          score: assignment._Score || "Not Graded",
-          scoreType: assignment._ScoreType || "",
-          points: assignment._Points || "",
-          notes: assignment._Notes || "",
-          description: assignment._Description || "",
+          name: assignment._Measure || assignment.Measure || "Untitled Assignment",
+          type: assignment._Type || assignment.Type || "Assignment",
+          date: assignment._Date || assignment.Date || "",
+          dueDate: assignment._DueDate || assignment.DueDate || "",
+          score: assignment._Score || assignment.Score || "Not Graded",
+          scoreType: assignment._ScoreType || assignment.ScoreType || "",
+          points: pointsStr,
+          pointsEarned,
+          pointsPossible,
+          notes: assignment._Notes || assignment.Notes || "",
+          description: assignment._Description || assignment.Description || "",
         });
       }
       
