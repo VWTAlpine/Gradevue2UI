@@ -22,31 +22,96 @@ export async function registerRoutes(
     }
     
     // Parse and extract just protocol + host (the library adds its own endpoints)
-    // Only do this if URL has paths that look like StudentVue-specific endpoints
     try {
       const parsed = new URL(url);
-      const path = parsed.pathname.toLowerCase();
-      
-      // Only strip paths that are definitely StudentVue UI paths (not the base service)
-      // These are pages users might copy from their browser
-      if (path.includes('pxp2') || 
-          path.includes('login') || 
-          path.includes('home') ||
-          path.includes('student') ||
-          path.includes('portal') ||
-          path.endsWith('.aspx') ||
-          path.endsWith('.asmx')) {
-        // Return just the base URL - library will add correct service path
-        return `${parsed.protocol}//${parsed.host}`;
-      }
-      
-      // If there's no recognizable StudentVue path, return as-is
-      // This allows flexibility for unusual district configurations
-      return url;
+      // Return just the base URL - library will add correct service path
+      return `${parsed.protocol}//${parsed.host}`;
     } catch {
       // If URL parsing fails, return as-is with https
       return url;
     }
+  }
+
+  // Generate alternative URL formats to try for a district
+  // The StudentVue library expects the base URL, but some districts have non-standard configurations
+  function getDistrictUrlVariants(baseUrl: string): string[] {
+    const variants: string[] = [];
+    
+    try {
+      const parsed = new URL(baseUrl);
+      const base = `${parsed.protocol}//${parsed.host}`;
+      
+      // Primary: Just the base URL (library appends /Service/PXPCommunication.asmx)
+      variants.push(base);
+      
+      // Some districts use specific paths that the library might need
+      // These are less common but worth trying
+      const host = parsed.host.toLowerCase();
+      
+      // If there's already a path in the URL, try that exact URL
+      if (parsed.pathname && parsed.pathname !== '/') {
+        variants.push(baseUrl);
+      }
+      
+      // For .com domains that might use subdomains differently
+      if (host.includes('.com')) {
+        // Some districts require explicit subdomain handling
+        const parts = host.split('.');
+        if (parts.length >= 3 && parts[0].toLowerCase().includes('student')) {
+          // Also try the base domain without studentvue subdomain (rare)
+          const baseDomain = parts.slice(1).join('.');
+          variants.push(`${parsed.protocol}//${baseDomain}`);
+        }
+      }
+      
+    } catch {
+      // If parsing fails, just return the original
+      variants.push(baseUrl);
+    }
+    
+    // Remove duplicates
+    return [...new Set(variants)];
+  }
+
+  // Attempt login with fallback URL patterns
+  async function attemptLogin(
+    districtUrl: string, 
+    username: string, 
+    password: string,
+    timeoutMs: number = 30000
+  ): Promise<{ client: any; usedUrl: string; error?: string }> {
+    const variants = getDistrictUrlVariants(districtUrl);
+    let lastError: any = null;
+    
+    for (const url of variants) {
+      console.log(`Attempting login to: ${url}`);
+      
+      try {
+        const client = await Promise.race([
+          StudentVue.login(url, {
+            username: username.trim(),
+            password: password,
+          }),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error(`Login timed out after ${timeoutMs/1000} seconds`)), timeoutMs)
+          )
+        ]);
+        
+        console.log(`Login successful with URL: ${url}`);
+        return { client, usedUrl: url };
+      } catch (err: any) {
+        console.error(`Login failed for ${url}:`, err.message);
+        lastError = err;
+        
+        // If it's clearly an auth error (not network/config), don't try other URLs
+        const errMsg = err.message?.toLowerCase() || '';
+        if (errMsg.includes('password') || errMsg.includes('username') || errMsg.includes('invalid')) {
+          break;
+        }
+      }
+    }
+    
+    return { client: null, usedUrl: districtUrl, error: lastError?.message || 'Unknown error' };
   }
 
   // StudentVue Login endpoint
@@ -64,7 +129,8 @@ export async function registerRoutes(
       // Normalize the district URL for compatibility
       const districtUrl = normalizeDistrictUrl(district);
 
-      console.log(`Attempting login to: ${districtUrl}`);
+      console.log(`Starting login process for district: ${districtUrl}`);
+      console.log(`Username provided: ${username.substring(0, 3)}***`);
 
       // Timeout wrapper for StudentVue operations
       const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
@@ -77,16 +143,65 @@ export async function registerRoutes(
       };
 
       try {
-        // Login with 30 second timeout
-        const client = await withTimeout(
-          StudentVue.login(districtUrl, {
-            username: username.trim(),
-            password: password,
-          }),
-          30000,
-          "Login"
-        );
+        // Attempt login with fallback URL patterns
+        const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+        
+        if (!loginResult.client) {
+          // Enhanced error handling with detailed messages
+          const errorMsg = loginResult.error?.toLowerCase() || '';
+          console.error("All login attempts failed. Last error:", loginResult.error);
+          
+          // Check for specific error patterns
+          if (errorMsg.includes('invalid') || errorMsg.includes('incorrect') || errorMsg.includes('password') || errorMsg.includes('username') || errorMsg.includes('user name')) {
+            return res.status(401).json({ 
+              success: false, 
+              error: "Invalid username or password. Please double-check your credentials and try again. Make sure there are no extra spaces.",
+              details: `Server response: ${loginResult.error}`
+            });
+          }
+          
+          if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') || errorMsg.includes('getaddrinfo')) {
+            return res.status(400).json({ 
+              success: false, 
+              error: "Could not connect to the district server. Please check your district URL and try again.",
+              details: `Server response: ${loginResult.error}`
+            });
+          }
+          
+          if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+            return res.status(504).json({ 
+              success: false, 
+              error: "Connection timed out. The district server may be slow or unavailable. Please try again.",
+              details: `Server response: ${loginResult.error}`
+            });
+          }
+          
+          if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
+            return res.status(400).json({ 
+              success: false, 
+              error: "SSL/TLS certificate error. The district server may have security configuration issues.",
+              details: `Server response: ${loginResult.error}`
+            });
+          }
+          
+          // Handle StudentVue-specific critical errors (error codes like 4D5DE)
+          if (errorMsg.includes('critical error') || /\([a-f0-9]{5}\)/i.test(loginResult.error || '')) {
+            return res.status(401).json({ 
+              success: false, 
+              error: "StudentVue returned an error. Please verify your username and password are correct. If the problem persists, try logging into StudentVue directly to check if your account is locked or if there are maintenance issues.",
+              details: `Server response: ${loginResult.error}`
+            });
+          }
+          
+          // Generic error with details
+          return res.status(401).json({ 
+            success: false, 
+            error: `Login failed. The StudentVue server returned: ${loginResult.error}`,
+            details: loginResult.error
+          });
+        }
 
+        const client = loginResult.client;
         console.log("Login successful, fetching gradebook...");
 
         // Fetch gradebook and student info in parallel with timeout
@@ -121,55 +236,19 @@ export async function registerRoutes(
         console.error("StudentVue login error:", loginError.message);
         console.error("Full error:", loginError);
         
-        // Provide more specific error messages
-        const errorMsg = loginError.message?.toLowerCase() || '';
-        
-        if (errorMsg.includes('invalid') || errorMsg.includes('incorrect') || errorMsg.includes('password') || errorMsg.includes('username')) {
-          return res.status(401).json({ 
-            success: false, 
-            error: "Invalid username or password. Please check your credentials." 
-          });
-        }
-        
-        if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') || errorMsg.includes('getaddrinfo')) {
-          return res.status(400).json({ 
-            success: false, 
-            error: "Could not connect to the district server. Please check your district URL and try again." 
-          });
-        }
-        
-        if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-          return res.status(504).json({ 
-            success: false, 
-            error: "Connection timed out. The district server may be slow or unavailable. Please try again." 
-          });
-        }
-        
-        if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
-          return res.status(400).json({ 
-            success: false, 
-            error: "SSL/TLS certificate error. The district server may have security configuration issues." 
-          });
-        }
-        
-        // Handle StudentVue-specific critical errors (error codes like 4D5DE)
-        if (errorMsg.includes('critical error') || /\([a-f0-9]{5}\)/i.test(errorMsg)) {
-          return res.status(401).json({ 
-            success: false, 
-            error: "StudentVue returned an error. Please verify your username and password are correct. If the problem persists, try logging into StudentVue directly to check if your account is locked or if there are maintenance issues." 
-          });
-        }
-        
+        // Provide the raw error message for debugging
         return res.status(401).json({ 
           success: false, 
-          error: `Login failed: ${loginError.message || 'Please check your credentials and district URL.'}` 
+          error: `Login failed: ${loginError.message || 'Please check your credentials and district URL.'}`,
+          details: loginError.message
         });
       }
     } catch (err: any) {
       console.error("Server error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: "An unexpected error occurred. Please try again." 
+        error: "An unexpected error occurred. Please try again.",
+        details: err.message
       });
     }
   });

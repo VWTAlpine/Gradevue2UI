@@ -35,10 +35,14 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await apiRequest("POST", "/api/studentvue/login", {
-        district,
-        username,
-        password,
+      const res = await fetch("/api/studentvue/login", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ district, username, password }),
+        credentials: "include",
       });
       const response = await res.json();
 
@@ -51,14 +55,19 @@ export default function LoginPage() {
         });
         setLocation("/dashboard");
       } else {
-        throw new Error(response.error || "Login failed");
+        // Show detailed error message with server details if available
+        const errorMessage = response.error || "Login failed";
+        const details = response.details ? ` (${response.details})` : "";
+        throw new Error(errorMessage + details);
       }
     } catch (error: any) {
+      const message = error.message || "Please check your credentials and try again";
       toast({
         title: "Login Failed",
-        description: error.message || "Please check your credentials and try again",
+        description: message,
         variant: "destructive",
       });
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
