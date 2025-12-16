@@ -6,11 +6,11 @@ import { useTheme } from "@/lib/themeContext";
 import { useGrades } from "@/lib/gradeContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText } from "lucide-react";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { logout, credentials, setIsLoading, setGradebook, setCredentials } = useGrades();
+  const { logout, credentials, setIsLoading, setGradebook, setCredentials, gradebook } = useGrades();
   const { toast } = useToast();
 
   const handleRefresh = async () => {
@@ -55,6 +55,105 @@ export default function SettingsPage() {
       description: "You have been signed out successfully",
     });
     window.location.href = "/";
+  };
+
+  const exportGradesCSV = () => {
+    if (!gradebook?.courses || gradebook.courses.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No grade data available to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Course", "Teacher", "Period", "Grade (%)", "Letter Grade"];
+    const rows = gradebook.courses.map((course) => [
+      course.name,
+      course.teacher || "",
+      course.period || "",
+      course.grade?.toFixed(2) || "N/A",
+      course.letterGrade || "N/A",
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+
+    downloadFile(csvContent, "grades.csv", "text/csv");
+    toast({
+      title: "Export Successful",
+      description: "Grades exported to CSV",
+    });
+  };
+
+  const exportAssignmentsCSV = () => {
+    if (!gradebook?.courses || gradebook.courses.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No assignment data available to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Course", "Assignment", "Type", "Due Date", "Points Earned", "Points Possible", "Percentage"];
+    const rows: string[][] = [];
+
+    gradebook.courses.forEach((course) => {
+      if (course.assignments) {
+        course.assignments.forEach((assignment) => {
+          let earned = "";
+          let possible = "";
+          let percentage = "";
+
+          if (assignment.score) {
+            const parts = assignment.score.split("/").map((p) => p.trim());
+            if (parts.length === 2) {
+              earned = parts[0];
+              possible = parts[1];
+              const e = parseFloat(earned);
+              const p = parseFloat(possible);
+              if (!isNaN(e) && !isNaN(p) && p > 0) {
+                percentage = ((e / p) * 100).toFixed(1) + "%";
+              }
+            }
+          }
+
+          rows.push([
+            course.name,
+            assignment.name,
+            assignment.type || "",
+            assignment.dueDate || "",
+            earned,
+            possible,
+            percentage,
+          ]);
+        });
+      }
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+
+    downloadFile(csvContent, "assignments.csv", "text/csv");
+    toast({
+      title: "Export Successful",
+      description: "Assignments exported to CSV",
+    });
+  };
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -190,6 +289,46 @@ export default function SettingsPage() {
                   )}
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-visible" data-testid="card-export">
+          <CardHeader className="flex flex-row items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <Download className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <CardTitle>Export Data</CardTitle>
+              <CardDescription>
+                Download your grades and assignments as CSV files
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Export Grades Summary</p>
+                <p className="text-sm text-muted-foreground">
+                  Download course grades as a CSV file
+                </p>
+              </div>
+              <Button onClick={exportGradesCSV} variant="outline" data-testid="button-export-grades">
+                <FileText className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Export All Assignments</p>
+                <p className="text-sm text-muted-foreground">
+                  Download detailed assignment data as a CSV file
+                </p>
+              </div>
+              <Button onClick={exportAssignmentsCSV} variant="outline" data-testid="button-export-assignments">
+                <FileText className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             </div>
           </CardContent>
         </Card>
