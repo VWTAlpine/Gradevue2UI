@@ -9,6 +9,7 @@ import { useGrades } from "@/lib/gradeContext";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GraduationCap, Lock, User, Globe, Loader2, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { StudentVueClient, parseGradebook } from "@/lib/studentvue-client";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -35,31 +36,38 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/studentvue/login", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest"
-        },
-        body: JSON.stringify({ district, username, password }),
-        credentials: "include",
-      });
-      const response = await res.json();
+      console.log("Attempting client-side login to:", district);
+      
+      const client = new StudentVueClient(district, username, password);
+      
+      await client.checkLogin();
+      console.log("Login successful, fetching gradebook...");
+      
+      const [gradebook, studentInfo] = await Promise.all([
+        client.gradebook().catch((e) => {
+          console.error("Gradebook fetch error:", e);
+          return null;
+        }),
+        client.studentInfo().catch((e) => {
+          console.error("Student info fetch error:", e);
+          return null;
+        }),
+      ]);
 
-      if (response.success && response.data) {
-        setGradebook(response.data);
-        setCredentials({ district, username, password });
-        toast({
-          title: "Success",
-          description: "Successfully logged in to StudentVue",
-        });
-        setLocation("/dashboard");
-      } else {
-        // Show detailed error message with server details if available
-        const errorMessage = response.error || "Login failed";
-        const details = response.details ? ` (${response.details})` : "";
-        throw new Error(errorMessage + details);
+      if (!gradebook) {
+        throw new Error("Successfully logged in but could not fetch gradebook data. Please try again.");
       }
+
+      const parsedData = parseGradebook(gradebook, studentInfo);
+      console.log(`Fetched ${parsedData.courses?.length || 0} courses`);
+      
+      setGradebook(parsedData);
+      setCredentials({ district, username, password });
+      toast({
+        title: "Success",
+        description: "Successfully logged in to StudentVue",
+      });
+      setLocation("/dashboard");
     } catch (error: any) {
       const message = error.message || "Please check your credentials and try again";
       toast({
