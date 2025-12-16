@@ -3,7 +3,7 @@ import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Calendar, Bell, X, Clock, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AttendanceSummary {
@@ -138,13 +138,14 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3" data-testid="stats-grid">
         <StatCard
           title="Overall GPA"
           value={gpa.toFixed(2)}
           subtitle="/ 4.0"
           chartData={gpaTrendData}
           chartColor="#3b82f6"
+          showChartBackground
           testId="stat-overall-gpa"
         />
         <StatCard
@@ -153,46 +154,34 @@ export default function DashboardPage() {
           subtitle={getGradeLabel(averageGrade) + "+"}
           chartData={gradeTrendData}
           chartColor="#10b981"
+          showChartBackground
           testId="stat-average-grade"
         />
-        <StatCard
-          title="Courses"
-          value={courses.length.toString()}
-          icon={BookOpen}
-          iconBgColor="bg-purple-100 dark:bg-purple-900/30"
-          iconColor="text-purple-600 dark:text-purple-400"
-          testId="stat-total-courses"
-        />
-        <StatCard
-          title="Term"
-          value={reportingPeriod.name || "Current"}
-          subtitle={reportingPeriod.endDate ? `Ends ${formatDate(reportingPeriod.endDate)}` : ""}
-          icon={Calendar}
-          iconBgColor="bg-amber-100 dark:bg-amber-900/30"
-          iconColor="text-amber-600 dark:text-amber-400"
-          testId="stat-current-term"
-        />
-      </div>
-
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4" data-testid="stats-grid-secondary">
-        <StatCard
-          title="Tardies"
-          value={attendance.totalTardies.toString()}
-          icon={Clock}
-          iconBgColor="bg-orange-100 dark:bg-orange-900/30"
-          iconColor="text-orange-600 dark:text-orange-400"
-          size="compact"
-          testId="stat-tardies"
-        />
-        <StatCard
-          title="Absences"
-          value={attendance.totalAbsences.toString()}
-          icon={AlertCircle}
-          iconBgColor="bg-red-100 dark:bg-red-900/30"
-          iconColor="text-red-600 dark:text-red-400"
-          size="compact"
-          testId="stat-absences"
-        />
+        <div className="flex flex-col gap-4">
+          <StatCard
+            title="Courses"
+            value={courses.length.toString()}
+            icon={BookOpen}
+            iconBgColor="bg-purple-100 dark:bg-purple-900/30"
+            iconColor="text-purple-600 dark:text-purple-400"
+            size="compact"
+            testId="stat-total-courses"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard
+              title="Tardies"
+              value={attendance.totalTardies.toString()}
+              size="mini"
+              testId="stat-tardies"
+            />
+            <StatCard
+              title="Absences"
+              value={attendance.totalAbsences.toString()}
+              size="mini"
+              testId="stat-absences"
+            />
+          </div>
+        </div>
       </div>
 
       {gradeChanges.length > 0 && (

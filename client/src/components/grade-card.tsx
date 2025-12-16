@@ -38,15 +38,16 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
           </span>
         </div>
 
-        <div className="pt-3 border-t border-emerald-500">
+        <div className="pt-3 border-t">
           <Link href={`/course/${index}`} onClick={() => onSelect?.(course)}>
             <Button 
               variant="ghost" 
-              className="w-full justify-between text-emerald-600 dark:text-emerald-400" 
+              size="sm"
+              className="w-full justify-between text-foreground" 
               data-testid={`button-view-course-${index}`}
             >
-              View Details
-              <ChevronRight className="h-4 w-4" />
+              <span className="text-xs">View Details</span>
+              <ChevronRight className="h-3 w-3" />
             </Button>
           </Link>
         </div>

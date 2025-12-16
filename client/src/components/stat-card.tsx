@@ -12,7 +12,8 @@ interface StatCardProps {
   testId?: string;
   chartData?: number[];
   chartColor?: string;
-  size?: "default" | "compact";
+  showChartBackground?: boolean;
+  size?: "default" | "compact" | "mini";
 }
 
 export function StatCard({
@@ -25,9 +26,21 @@ export function StatCard({
   testId,
   chartData,
   chartColor = "#10b981",
+  showChartBackground = false,
   size = "default",
 }: StatCardProps) {
   const formattedChartData = chartData?.map((val, idx) => ({ value: val, idx }));
+
+  if (size === "mini") {
+    return (
+      <Card className="overflow-visible" data-testid={testId || `stat-card-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+        <CardContent className="p-3 text-center">
+          <p className="text-xs text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold tracking-tight mt-0.5">{value}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (size === "compact") {
     return (
@@ -36,7 +49,7 @@ export function StatCard({
           <div className="flex items-center justify-between gap-2">
             <div className="space-y-0.5 min-w-0 flex-1">
               <p className="text-xs text-muted-foreground truncate">{title}</p>
-              <p className="text-2xl font-bold tracking-tight">
+              <p className="text-3xl font-bold tracking-tight">
                 {value}
               </p>
             </div>
@@ -73,7 +86,7 @@ export function StatCard({
           )}
         </div>
         {formattedChartData && formattedChartData.length > 0 && (
-          <div className="mt-3 h-12 w-full">
+          <div className={`mt-3 h-16 w-full rounded-md ${showChartBackground ? "bg-muted/50 p-2" : ""}`}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={formattedChartData}>
                 <Line
