@@ -1,10 +1,12 @@
-import { useGrades } from "@/lib/gradeContext";
+import { useGrades, type GradeChange } from "@/lib/gradeContext";
 import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
-import { TrendingUp, Award, BookOpen, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Award, BookOpen, Calendar, Bell, X } from "lucide-react";
 
 export default function DashboardPage() {
-  const { gradebook, setSelectedCourse } = useGrades();
+  const { gradebook, setSelectedCourse, gradeChanges, clearGradeChanges } = useGrades();
 
   // Add data-testid to stat cards and course cards
 
@@ -121,6 +123,70 @@ export default function DashboardPage() {
           testId="stat-current-term"
         />
       </div>
+
+      {gradeChanges.length > 0 && (
+        <Card className="overflow-visible border-blue-200 dark:border-blue-800" data-testid="card-grade-changes">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <CardTitle className="text-lg">Recent Grade Changes</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearGradeChanges}
+              data-testid="button-clear-changes"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {gradeChanges.slice(0, 5).map((change: GradeChange, idx: number) => {
+                const isImproved = (change.newGrade ?? 0) > (change.previousGrade ?? 0);
+                return (
+                  <div
+                    key={`${change.courseName}-${idx}`}
+                    className="flex items-center justify-between rounded-md bg-muted/50 p-3"
+                    data-testid={`grade-change-${idx}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                        isImproved
+                          ? "bg-emerald-100 dark:bg-emerald-900/30"
+                          : "bg-red-100 dark:bg-red-900/30"
+                      }`}>
+                        {isImproved ? (
+                          <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{change.courseName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {change.previousGrade?.toFixed(1) ?? "N/A"}% {change.previousLetter ? `(${change.previousLetter})` : ""} 
+                          {" → "}
+                          {change.newGrade?.toFixed(1) ?? "N/A"}% {change.newLetter ? `(${change.newLetter})` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      isImproved
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400"
+                    }`}>
+                      {isImproved ? "+" : ""}{((change.newGrade ?? 0) - (change.previousGrade ?? 0)).toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div data-testid="courses-section">
         <h2 className="mb-6 text-2xl font-semibold" data-testid="heading-my-courses">My Courses</h2>

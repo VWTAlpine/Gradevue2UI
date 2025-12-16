@@ -1,6 +1,16 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { Gradebook, Course, LoginCredentials } from "@shared/schema";
 
+export interface GradeChange {
+  courseId: string;
+  courseName: string;
+  previousGrade: number | null;
+  newGrade: number | null;
+  previousLetter: string | null;
+  newLetter: string | null;
+  timestamp: string;
+}
+
 interface GradeContextType {
   gradebook: Gradebook | null;
   setGradebook: (gradebook: Gradebook | null) => void;
@@ -14,18 +24,64 @@ interface GradeContextType {
   setSelectedCourse: (course: Course | null) => void;
   hypotheticalMode: boolean;
   setHypotheticalMode: (mode: boolean) => void;
+  gradeChanges: GradeChange[];
+  clearGradeChanges: () => void;
 }
 
 const GradeContext = createContext<GradeContextType | undefined>(undefined);
 
 export function GradeProvider({ children }: { children: ReactNode }) {
-  const [gradebook, setGradebook] = useState<Gradebook | null>(null);
+  const [gradebook, setGradebookState] = useState<Gradebook | null>(null);
   const [credentials, setCredentials] = useState<LoginCredentials | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [hypotheticalMode, setHypotheticalMode] = useState(false);
+  const [gradeChanges, setGradeChanges] = useState<GradeChange[]>([]);
 
   const isLoggedIn = gradebook !== null;
+
+  const detectGradeChanges = (oldGradebook: Gradebook | null, newGradebook: Gradebook): GradeChange[] => {
+    if (!oldGradebook || !newGradebook.courses) return [];
+    
+    const changes: GradeChange[] = [];
+    const timestamp = new Date().toISOString();
+
+    newGradebook.courses.forEach((newCourse) => {
+      const oldCourse = oldGradebook.courses?.find((c) => c.id === newCourse.id);
+      if (!oldCourse) return;
+
+      const gradeChanged = oldCourse.grade !== newCourse.grade;
+      const letterChanged = oldCourse.letterGrade !== newCourse.letterGrade;
+
+      if (gradeChanged || letterChanged) {
+        changes.push({
+          courseId: newCourse.id,
+          courseName: newCourse.name,
+          previousGrade: oldCourse.grade ?? null,
+          newGrade: newCourse.grade ?? null,
+          previousLetter: oldCourse.letterGrade ?? null,
+          newLetter: newCourse.letterGrade ?? null,
+          timestamp,
+        });
+      }
+    });
+
+    return changes;
+  };
+
+  const setGradebook = (newGradebook: Gradebook | null) => {
+    if (newGradebook && gradebook) {
+      const changes = detectGradeChanges(gradebook, newGradebook);
+      if (changes.length > 0) {
+        setGradeChanges((prev) => [...changes, ...prev].slice(0, 50));
+      }
+    }
+    setGradebookState(newGradebook);
+  };
+
+  const clearGradeChanges = () => {
+    setGradeChanges([]);
+  };
 
   useEffect(() => {
     const savedGradebook = localStorage.getItem("gradebook");
@@ -33,7 +89,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     
     if (savedGradebook) {
       try {
-        setGradebook(JSON.parse(savedGradebook));
+        setGradebookState(JSON.parse(savedGradebook));
       } catch (e) {
         localStorage.removeItem("gradebook");
       }
@@ -87,6 +143,8 @@ export function GradeProvider({ children }: { children: ReactNode }) {
         setSelectedCourse,
         hypotheticalMode,
         setHypotheticalMode,
+        gradeChanges,
+        clearGradeChanges,
       }}
     >
       {children}
