@@ -152,6 +152,14 @@ export async function registerRoutes(
           });
         }
         
+        // Handle StudentVue-specific critical errors (error codes like 4D5DE)
+        if (errorMsg.includes('critical error') || /\([a-f0-9]{5}\)/i.test(errorMsg)) {
+          return res.status(401).json({ 
+            success: false, 
+            error: "StudentVue returned an error. Please verify your username and password are correct. If the problem persists, try logging into StudentVue directly to check if your account is locked or if there are maintenance issues." 
+          });
+        }
+        
         return res.status(401).json({ 
           success: false, 
           error: `Login failed: ${loginError.message || 'Please check your credentials and district URL.'}` 
