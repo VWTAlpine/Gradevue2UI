@@ -49,6 +49,7 @@ Preferred communication style: Simple, everyday language.
 ### Authentication Details
 - **Client-side**: Direct SOAP XML requests to StudentVue API for faster response
 - **Server fallback**: Uses `studentvue` npm package when client requests fail (CORS restrictions, etc.)
+- **Assignment fallback**: If client-side login succeeds but no assignments are found, automatically tries server-side parsing for better data extraction
 - Credentials stored in React context for session duration
 
 ### Attendance Tracking
