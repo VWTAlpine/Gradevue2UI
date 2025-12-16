@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/lib/themeContext";
 import { useGrades } from "@/lib/gradeContext";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette } from "lucide-react";
 
 export default function SettingsPage() {
@@ -24,12 +25,7 @@ export default function SettingsPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/studentvue/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
-
+      const response = await apiRequest("POST", "/api/studentvue/login", credentials);
       const data = await response.json();
 
       if (data.success && data.data) {
