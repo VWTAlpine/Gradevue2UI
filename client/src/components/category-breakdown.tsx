@@ -1,4 +1,5 @@
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Category } from "@shared/schema";
 
 interface CategoryBreakdownProps {
@@ -57,6 +58,55 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
                 />
               </div>
             </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function CategoryBreakdownCompact({ categories }: CategoryBreakdownProps) {
+  if (!categories || categories.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3" data-testid="category-breakdown-compact">
+      <div className="flex flex-wrap gap-2">
+        {categories.map((category, index) => {
+          const color = categoryColors[index % categoryColors.length];
+          return (
+            <Tooltip key={index}>
+              <TooltipTrigger asChild>
+                <div 
+                  className="flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-1.5 cursor-default"
+                  data-testid={`category-compact-${index}`}
+                  aria-label={`${category.name}: ${category.score.toFixed(1)}% score, ${category.weight}% weight`}
+                >
+                  <div className="relative h-2 w-10 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`absolute left-0 top-0 h-full rounded-full ${color.bg}`}
+                      style={{ width: `${Math.min(category.score, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium truncate max-w-20">{category.name}</span>
+                  <span className={`text-xs font-bold ${color.text}`}>
+                    {category.score.toFixed(1)}%
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({category.weight}%)
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-sm">
+                  <p className="font-medium">{category.name}</p>
+                  <p>Score: {category.score.toFixed(1)}%</p>
+                  <p>Weight: {category.weight}% of grade</p>
+                  {category.points && <p>Points: {category.points}</p>}
+                </div>
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </div>

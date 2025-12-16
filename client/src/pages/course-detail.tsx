@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGrades } from "@/lib/gradeContext";
 import { AssignmentRow } from "@/components/assignment-row";
-import { CategoryBreakdown } from "@/components/category-breakdown";
+import { CategoryBreakdownCompact } from "@/components/category-breakdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,134 +126,78 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              {course.name}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                {course.teacher}
-              </span>
-              {course.period && (
-                <span className="flex items-center gap-1">
-                  Period {course.period}
-                </span>
-              )}
-              {course.room && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  Room {course.room}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="text-right" data-testid="course-grade-summary">
-          <p className={`text-4xl font-bold ${getGradeColor(displayLetter)}`} data-testid="text-course-grade">
-            {displayGrade.toFixed(1)}%
-          </p>
-          <Badge className={`mt-1 text-lg ${getGradeBgColor(displayLetter)}`} data-testid="badge-course-letter">
-            {displayLetter}
-          </Badge>
-          {hypotheticalMode && (
-            <p className="mt-1 text-xs text-muted-foreground">Hypothetical</p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2 rounded-lg border p-1">
-          <Button
-            variant={chartType === "bar" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setChartType("bar")}
-            data-testid="button-chart-bar"
-          >
-            <BarChart3 className="mr-1 h-4 w-4" />
-            Bar
-          </Button>
-          <Button
-            variant={chartType === "line" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setChartType("line")}
-            data-testid="button-chart-line"
-          >
-            <LineChart className="mr-1 h-4 w-4" />
-            Line
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <FlaskConical className={`h-4 w-4 ${hypotheticalMode ? "text-primary" : "text-muted-foreground"}`} />
-          <Label htmlFor="hypothetical-mode" className="text-sm cursor-pointer">
-            Hypothetical Mode
-          </Label>
-          <Switch
-            id="hypothetical-mode"
-            checked={hypotheticalMode}
-            onCheckedChange={setHypotheticalMode}
-            data-testid="switch-hypothetical"
-          />
-        </div>
-      </div>
-
-      {hypotheticalMode && (
-        <Card className="overflow-visible border-primary/20 bg-primary/5" data-testid="card-hypothetical">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FlaskConical className="h-4 w-4" />
-              Hypothetical Mode Active
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              You're viewing a hypothetical grade calculation. The grade shown above
-              is what your grade would be based on simulated scenarios. 
-              Add hypothetical assignments below to see how they would affect your grade.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <CategoryBreakdown categories={course.categories || []} />
-
+    <div className="space-y-4">
       {categoryChartData.length > 0 && (
         <Card className="overflow-visible" data-testid="card-chart">
-          <CardHeader>
-            <CardTitle>
-              {chartType === "bar" ? "Category Performance" : "Grade History"}
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setLocation("/dashboard")}
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <CardTitle className="text-lg">{course.name}</CardTitle>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                    <User className="h-3 w-3" />
+                    {course.teacher}
+                    {course.period && <span>Period {course.period}</span>}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 rounded-lg border p-1">
+                  <Button
+                    variant={chartType === "bar" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setChartType("bar")}
+                    data-testid="button-chart-bar"
+                  >
+                    <BarChart3 className="mr-1 h-4 w-4" />
+                    Bar
+                  </Button>
+                  <Button
+                    variant={chartType === "line" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setChartType("line")}
+                    data-testid="button-chart-line"
+                  >
+                    <LineChart className="mr-1 h-4 w-4" />
+                    Line
+                  </Button>
+                </div>
+                <div className="text-right" data-testid="course-grade-summary">
+                  <p className={`text-2xl font-bold ${getGradeColor(displayLetter)}`} data-testid="text-course-grade">
+                    {displayGrade.toFixed(1)}%
+                  </p>
+                  <Badge className={`${getGradeBgColor(displayLetter)}`} data-testid="badge-course-letter">
+                    {displayLetter}
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="h-64 w-full">
+            <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 {chartType === "bar" ? (
                   <BarChart
                     data={categoryChartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
                     />
                     <YAxis
                       domain={[0, 100]}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
                     />
                     <Tooltip
@@ -261,13 +205,10 @@ export default function CourseDetailPage() {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
                           return (
-                            <div className="rounded-lg border bg-card p-3 shadow-lg">
+                            <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
                               <p className="font-medium">{data.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Score: {data.score.toFixed(1)}%
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Weight: {data.weight}%
+                              <p className="text-muted-foreground">
+                                Score: {data.score.toFixed(1)}% | Weight: {data.weight}%
                               </p>
                             </div>
                           );
@@ -284,18 +225,17 @@ export default function CourseDetailPage() {
                 ) : (
                   <RechartsLineChart
                     data={gradeHistoryData.length > 0 ? gradeHistoryData : categoryChartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       dataKey={gradeHistoryData.length > 0 ? "index" : "name"}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
-                      label={gradeHistoryData.length > 0 ? { value: "Assignment #", position: "bottom", offset: -5 } : undefined}
                     />
                     <YAxis
                       domain={[0, 100]}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
                     />
                     <Tooltip
@@ -303,9 +243,9 @@ export default function CourseDetailPage() {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
                           return (
-                            <div className="rounded-lg border bg-card p-3 shadow-lg">
+                            <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
                               <p className="font-medium">{data.fullName || data.name}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground">
                                 Score: {data.score.toFixed(1)}%
                               </p>
                             </div>
@@ -319,8 +259,8 @@ export default function CourseDetailPage() {
                       dataKey="score"
                       stroke="#3b82f6"
                       strokeWidth={2}
-                      dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
+                      dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                   </RechartsLineChart>
                 )}
@@ -330,20 +270,54 @@ export default function CourseDetailPage() {
         </Card>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <FlaskConical className={`h-4 w-4 ${hypotheticalMode ? "text-primary" : "text-muted-foreground"}`} />
+          <Label htmlFor="hypothetical-mode" className="text-sm cursor-pointer">
+            Hypothetical Mode
+          </Label>
+          <Switch
+            id="hypothetical-mode"
+            checked={hypotheticalMode}
+            onCheckedChange={setHypotheticalMode}
+            data-testid="switch-hypothetical"
+          />
+        </div>
+        {course.room && (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            Room {course.room}
+          </span>
+        )}
+      </div>
+
+      {hypotheticalMode && (
+        <Card className="overflow-visible border-primary/20 bg-primary/5" data-testid="card-hypothetical">
+          <CardContent className="py-3">
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <FlaskConical className="h-4 w-4" />
+              Hypothetical Mode is active. The grade shown reflects simulated scenarios.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <CategoryBreakdownCompact categories={course.categories || []} />
+
       <Card className="overflow-visible" data-testid="card-assignments">
-        <CardHeader>
-          <CardTitle>Assignments</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Assignments</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2">
           {course.assignments && course.assignments.length > 0 ? (
             course.assignments.map((assignment, aIndex) => (
               <AssignmentRow key={aIndex} assignment={assignment} index={aIndex} />
             ))
           ) : (
-            <div className="py-8 text-center">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No assignments</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="py-6 text-center">
+              <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-3 text-sm font-medium">No assignments</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
                 No assignments have been recorded for this course yet
               </p>
             </div>

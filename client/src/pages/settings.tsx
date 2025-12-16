@@ -1,17 +1,32 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/lib/themeContext";
+import { Input } from "@/components/ui/input";
+import { useTheme, presetThemes } from "@/lib/themeContext";
 import { useGrades } from "@/lib/gradeContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText, Check, Pencil } from "lucide-react";
+
+type ColorTheme = "blue" | "green" | "purple" | "orange" | "rose" | "custom1" | "custom2" | "custom3";
+
+const presetColors: { id: ColorTheme; color: string; name: string }[] = [
+  { id: "blue", color: "hsl(217 91% 60%)", name: "Blue" },
+  { id: "green", color: "hsl(142 76% 36%)", name: "Green" },
+  { id: "purple", color: "hsl(271 91% 65%)", name: "Purple" },
+  { id: "orange", color: "hsl(24 95% 53%)", name: "Orange" },
+  { id: "rose", color: "hsl(346 77% 50%)", name: "Rose" },
+];
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorTheme, setColorTheme, customColors, setCustomColor } = useTheme();
   const { logout, credentials, setIsLoading, setGradebook, setCredentials, gradebook } = useGrades();
   const { toast } = useToast();
+  const [editingCustom, setEditingCustom] = useState<"custom1" | "custom2" | "custom3" | null>(null);
+  const [customHue, setCustomHue] = useState("217");
+  const [customName, setCustomName] = useState("");
 
   const handleRefresh = async () => {
     if (!credentials || credentials.district === "demo") {
@@ -156,6 +171,32 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveCustomColor = (slot: "custom1" | "custom2" | "custom3") => {
+    const hue = parseInt(customHue) || 217;
+    const primary = `${hue} 80% 50%`;
+    const name = customName.trim() || `Custom ${slot.slice(-1)}`;
+    setCustomColor(slot, primary, name);
+    setColorTheme(slot);
+    setEditingCustom(null);
+    toast({
+      title: "Theme Saved",
+      description: `Custom theme "${name}" has been saved`,
+    });
+  };
+
+  const getCustomSlotDisplay = (slot: "custom1" | "custom2" | "custom3") => {
+    if (customColors[slot]) {
+      return {
+        name: customColors[slot].name,
+        color: `hsl(${customColors[slot].primary})`,
+      };
+    }
+    return {
+      name: `Custom ${slot.slice(-1)}`,
+      color: "hsl(217 20% 50%)",
+    };
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -180,7 +221,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <Label>Theme</Label>
+              <Label>Mode</Label>
               <div className="grid gap-3 sm:grid-cols-3">
                 <Button
                   variant={theme === "light" ? "default" : "outline"}
@@ -209,6 +250,155 @@ export default function SettingsPage() {
                   <Monitor className="h-4 w-4" />
                   System
                 </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label>Color Theme</Label>
+              <div className="grid gap-3 sm:grid-cols-5">
+                {presetColors.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => setColorTheme(preset.id)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border p-3 transition-all hover-elevate ${
+                      colorTheme === preset.id ? "border-primary ring-2 ring-primary/20" : "border-border"
+                    }`}
+                    data-testid={`button-color-${preset.id}`}
+                  >
+                    <div
+                      className="h-8 w-8 rounded-full border-2 border-white shadow-sm"
+                      style={{ backgroundColor: preset.color }}
+                    />
+                    <span className="text-xs font-medium">{preset.name}</span>
+                    {colorTheme === preset.id && (
+                      <Check className="h-3 w-3 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Custom Themes</Label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(["custom1", "custom2", "custom3"] as const).map((slot) => {
+                  const display = getCustomSlotDisplay(slot);
+                  const isEditing = editingCustom === slot;
+                  
+                  return (
+                    <div key={slot} className="space-y-2">
+                      {isEditing ? (
+                        <div className="rounded-lg border p-3 space-y-3">
+                          <Input
+                            placeholder="Theme name"
+                            value={customName}
+                            onChange={(e) => setCustomName(e.target.value)}
+                            className="text-sm"
+                            data-testid={`input-custom-name-${slot}`}
+                          />
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs">Hue (0-360)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="360"
+                                value={customHue}
+                                onChange={(e) => {
+                                  const val = Math.min(360, Math.max(0, parseInt(e.target.value) || 0));
+                                  setCustomHue(val.toString());
+                                }}
+                                className="w-16 h-7 text-xs"
+                                data-testid={`input-custom-hue-number-${slot}`}
+                              />
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="360"
+                              value={customHue}
+                              onChange={(e) => setCustomHue(e.target.value)}
+                              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                              data-testid={`input-custom-hue-${slot}`}
+                            />
+                            <div 
+                              className="h-6 w-full rounded-md"
+                              style={{ backgroundColor: `hsl(${customHue} 80% 50%)` }}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveCustomColor(slot)}
+                              data-testid={`button-save-custom-${slot}`}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingCustom(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (customColors[slot]) {
+                              setColorTheme(slot);
+                            } else {
+                              setCustomHue("217");
+                              setCustomName("");
+                              setEditingCustom(slot);
+                            }
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-lg border p-3 transition-all hover-elevate ${
+                            colorTheme === slot ? "border-primary ring-2 ring-primary/20" : "border-border"
+                          }`}
+                          data-testid={`button-custom-${slot}`}
+                        >
+                          <div
+                            className={`h-8 w-8 rounded-full border-2 border-white shadow-sm ${
+                              !customColors[slot] ? "border-dashed border-muted-foreground/50" : ""
+                            }`}
+                            style={{ backgroundColor: display.color }}
+                          />
+                          <span className="flex-1 text-left text-sm font-medium">{display.name}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const storedColors = localStorage.getItem("customColors");
+                              const parsed = storedColors ? JSON.parse(storedColors) : {};
+                              if (parsed[slot]) {
+                                const parts = parsed[slot].primary.split(" ");
+                                setCustomHue(parts[0] || "217");
+                                setCustomName(parsed[slot].name || "");
+                              } else if (customColors[slot]) {
+                                const parts = customColors[slot].primary.split(" ");
+                                setCustomHue(parts[0] || "217");
+                                setCustomName(customColors[slot].name || "");
+                              } else {
+                                setCustomHue("217");
+                                setCustomName("");
+                              }
+                              setEditingCustom(slot);
+                            }}
+                            data-testid={`button-edit-custom-${slot}`}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
