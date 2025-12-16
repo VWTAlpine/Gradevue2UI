@@ -7,6 +7,48 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Helper function to normalize StudentVue district URLs
+  // The studentvue npm package expects the base URL (e.g., https://studentvue.district.org)
+  // and will automatically append /Service/PXPCommunication.asmx
+  function normalizeDistrictUrl(input: string): string {
+    let url = input.trim();
+    
+    // Remove trailing slashes
+    url = url.replace(/\/+$/, '');
+    
+    // Add https if no protocol
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+    
+    // Parse and extract just protocol + host (the library adds its own endpoints)
+    // Only do this if URL has paths that look like StudentVue-specific endpoints
+    try {
+      const parsed = new URL(url);
+      const path = parsed.pathname.toLowerCase();
+      
+      // Only strip paths that are definitely StudentVue UI paths (not the base service)
+      // These are pages users might copy from their browser
+      if (path.includes('pxp2') || 
+          path.includes('login') || 
+          path.includes('home') ||
+          path.includes('student') ||
+          path.includes('portal') ||
+          path.endsWith('.aspx') ||
+          path.endsWith('.asmx')) {
+        // Return just the base URL - library will add correct service path
+        return `${parsed.protocol}//${parsed.host}`;
+      }
+      
+      // If there's no recognizable StudentVue path, return as-is
+      // This allows flexibility for unusual district configurations
+      return url;
+    } catch {
+      // If URL parsing fails, return as-is with https
+      return url;
+    }
+  }
+
   // StudentVue Login endpoint
   app.post("/api/studentvue/login", async (req, res) => {
     try {
@@ -19,34 +61,41 @@ export async function registerRoutes(
         });
       }
 
-      // Clean up the district URL
-      let districtUrl = district.trim();
-      
-      // Remove trailing slashes
-      districtUrl = districtUrl.replace(/\/+$/, '');
-      
-      // Add https if no protocol specified
-      if (!districtUrl.startsWith("http://") && !districtUrl.startsWith("https://")) {
-        districtUrl = "https://" + districtUrl;
-      }
+      // Normalize the district URL for compatibility
+      const districtUrl = normalizeDistrictUrl(district);
 
       console.log(`Attempting login to: ${districtUrl}`);
 
+      // Timeout wrapper for StudentVue operations
+      const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs/1000} seconds`)), timeoutMs)
+          )
+        ]);
+      };
+
       try {
-        const client = await StudentVue.login(districtUrl, {
-          username: username.trim(),
-          password: password,
-        });
+        // Login with 30 second timeout
+        const client = await withTimeout(
+          StudentVue.login(districtUrl, {
+            username: username.trim(),
+            password: password,
+          }),
+          30000,
+          "Login"
+        );
 
         console.log("Login successful, fetching gradebook...");
 
-        // Fetch gradebook and student info in parallel
+        // Fetch gradebook and student info in parallel with timeout
         const [gradebook, studentInfo] = await Promise.all([
-          client.gradebook().catch((e: any) => {
+          withTimeout(client.gradebook(), 20000, "Gradebook fetch").catch((e: any) => {
             console.error("Gradebook fetch error:", e.message);
             return null;
           }),
-          client.studentInfo().catch((e: any) => {
+          withTimeout(client.studentInfo(), 20000, "Student info fetch").catch((e: any) => {
             console.error("Student info fetch error:", e.message);
             return null;
           }),
@@ -82,17 +131,24 @@ export async function registerRoutes(
           });
         }
         
-        if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused')) {
+        if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') || errorMsg.includes('getaddrinfo')) {
           return res.status(400).json({ 
             success: false, 
-            error: "Could not connect to the district server. Please check your district URL." 
+            error: "Could not connect to the district server. Please check your district URL and try again." 
           });
         }
         
-        if (errorMsg.includes('timeout')) {
+        if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
           return res.status(504).json({ 
             success: false, 
-            error: "Connection timed out. The district server may be slow or unavailable." 
+            error: "Connection timed out. The district server may be slow or unavailable. Please try again." 
+          });
+        }
+        
+        if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
+          return res.status(400).json({ 
+            success: false, 
+            error: "SSL/TLS certificate error. The district server may have security configuration issues." 
           });
         }
         
