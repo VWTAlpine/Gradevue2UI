@@ -23,7 +23,6 @@ import {
   Settings,
   LogOut,
   GraduationCap,
-  TrendingUp,
   Building,
 } from "lucide-react";
 
@@ -47,11 +46,6 @@ const mainNavItems = [
     title: "Attendance",
     url: "/attendance",
     icon: Calendar,
-  },
-  {
-    title: "Term Comparison",
-    url: "/term-comparison",
-    icon: TrendingUp,
   },
   {
     title: "Settings",
