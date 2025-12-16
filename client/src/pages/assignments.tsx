@@ -1,18 +1,26 @@
 import { useState, useMemo } from "react";
-import { useGrades } from "@/lib/gradeContext";
+import { useGrades, type HypotheticalAssignment } from "@/lib/gradeContext";
 import { AssignmentRow } from "@/components/assignment-row";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
-import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText } from "lucide-react";
+import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Edit2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -27,12 +35,26 @@ import {
 type ViewMode = "list" | "chart";
 
 export default function AssignmentsPage() {
-  const { gradebook, hypotheticalMode, setHypotheticalMode } = useGrades();
+  const { 
+    gradebook, 
+    hypotheticalGradebook,
+    hypotheticalMode, 
+    setHypotheticalMode,
+    courseOverrides,
+    updateAssignmentScore,
+    addHypotheticalAssignment,
+    removeHypotheticalAssignment,
+    clearAllOverrides,
+  } = useGrades();
+  
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all");
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set(["0"]));
+  const [addDialogOpen, setAddDialogOpen] = useState<string | null>(null);
+  const [newAssignment, setNewAssignment] = useState({ name: "", type: "Assignment", pointsEarned: "", pointsPossible: "" });
 
-  const courses = gradebook?.courses || [];
+  const activeGradebook = hypotheticalMode && hypotheticalGradebook ? hypotheticalGradebook : gradebook;
+  const courses = activeGradebook?.courses || [];
 
   const filteredCourses = useMemo(() => {
     if (selectedCourseFilter === "all") {
@@ -80,6 +102,29 @@ export default function AssignmentsPage() {
     }
   };
 
+  const handleAddAssignment = (courseId: string) => {
+    if (!newAssignment.name || !newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
+    
+    const assignment: HypotheticalAssignment = {
+      id: `hypo-${Date.now()}`,
+      name: newAssignment.name,
+      type: newAssignment.type,
+      pointsEarned: parseFloat(newAssignment.pointsEarned),
+      pointsPossible: parseFloat(newAssignment.pointsPossible),
+    };
+    
+    addHypotheticalAssignment(courseId, assignment);
+    setNewAssignment({ name: "", type: "Assignment", pointsEarned: "", pointsPossible: "" });
+    setAddDialogOpen(null);
+  };
+
+  const handleModeToggle = (enabled: boolean) => {
+    setHypotheticalMode(enabled);
+    if (!enabled) {
+      clearAllOverrides();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -117,19 +162,46 @@ export default function AssignmentsPage() {
           </div>
 
           <div className="flex items-center gap-2 rounded-lg border p-2">
-            <FlaskConical className="h-4 w-4 text-muted-foreground" />
+            <FlaskConical className={`h-4 w-4 ${hypotheticalMode ? "text-purple-500" : "text-muted-foreground"}`} />
             <Label htmlFor="hypothetical" className="text-sm">
-              Hypothetical Mode
+              What-If Mode
             </Label>
             <Switch
               id="hypothetical"
               checked={hypotheticalMode}
-              onCheckedChange={setHypotheticalMode}
+              onCheckedChange={handleModeToggle}
               data-testid="switch-hypothetical"
             />
           </div>
         </div>
       </div>
+
+      {hypotheticalMode && (
+        <Card className="overflow-visible border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <FlaskConical className="h-5 w-5 text-purple-500" />
+                <div>
+                  <p className="font-medium text-purple-700 dark:text-purple-300">What-If Mode Active</p>
+                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                    Edit scores or add assignments to see how they affect your grades
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearAllOverrides}
+                className="border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-300"
+                data-testid="button-reset-hypothetical"
+              >
+                Reset Changes
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button
@@ -140,7 +212,7 @@ export default function AssignmentsPage() {
         >
           All Courses
         </Button>
-        {courses.map((course, index) => (
+        {(gradebook?.courses || []).map((course, index) => (
           <Button
             key={index}
             variant={selectedCourseFilter === index.toString() ? "default" : "outline"}
@@ -167,9 +239,11 @@ export default function AssignmentsPage() {
             </div>
           ) : (
             filteredCourses.map((course, index) => {
-              const actualIndex = courses.findIndex((c) => c.id === course.id);
+              const actualIndex = (gradebook?.courses || []).findIndex((c) => c.id === course.id);
               const indexKey = actualIndex >= 0 ? actualIndex.toString() : index.toString();
               const isExpanded = expandedCourses.has(indexKey);
+              const overrides = courseOverrides.get(course.id);
+              const hasChanges = overrides && (overrides.modifiedAssignments.length > 0 || overrides.addedAssignments.length > 0);
 
               return (
                 <Collapsible
@@ -177,7 +251,7 @@ export default function AssignmentsPage() {
                   open={isExpanded}
                   onOpenChange={() => toggleCourseExpanded(indexKey)}
                 >
-                  <Card className="overflow-visible" data-testid={`course-card-${index}`}>
+                  <Card className={`overflow-visible ${hasChanges ? "border-purple-300 dark:border-purple-700" : ""}`} data-testid={`course-card-${index}`}>
                     <CollapsibleTrigger asChild>
                       <CardHeader className="cursor-pointer pb-3" data-testid={`collapsible-trigger-${index}`}>
                         <div className="flex items-center justify-between gap-4">
@@ -188,7 +262,14 @@ export default function AssignmentsPage() {
                               <ChevronRight className="h-5 w-5 text-muted-foreground" />
                             )}
                             <div>
-                              <CardTitle className="text-lg" data-testid={`course-name-${index}`}>{course.name}</CardTitle>
+                              <div className="flex items-center gap-2">
+                                <CardTitle className="text-lg" data-testid={`course-name-${index}`}>{course.name}</CardTitle>
+                                {hasChanges && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                                    Modified
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 {course.teacher} {course.period ? `Period ${course.period}` : ""}
                               </p>
@@ -213,12 +294,79 @@ export default function AssignmentsPage() {
                               key={aIndex}
                               assignment={assignment}
                               index={aIndex}
+                              courseId={course.id}
+                              editable={hypotheticalMode}
+                              onScoreChange={hypotheticalMode ? (earned, possible) => updateAssignmentScore(course.id, aIndex, earned, possible) : undefined}
                             />
                           ))
                         ) : (
                           <p className="py-4 text-center text-sm text-muted-foreground">
                             No assignments for this course
                           </p>
+                        )}
+                        
+                        {hypotheticalMode && (
+                          <Dialog open={addDialogOpen === course.id} onOpenChange={(open) => setAddDialogOpen(open ? course.id : null)}>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full mt-2 gap-2 border-dashed"
+                                data-testid={`button-add-assignment-${index}`}
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add Hypothetical Assignment
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add Hypothetical Assignment</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 pt-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="assignment-name">Assignment Name</Label>
+                                  <Input
+                                    id="assignment-name"
+                                    placeholder="e.g., Final Exam"
+                                    value={newAssignment.name}
+                                    onChange={(e) => setNewAssignment(prev => ({ ...prev, name: e.target.value }))}
+                                    data-testid="input-assignment-name"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="points-earned">Points Earned</Label>
+                                    <Input
+                                      id="points-earned"
+                                      type="number"
+                                      placeholder="90"
+                                      value={newAssignment.pointsEarned}
+                                      onChange={(e) => setNewAssignment(prev => ({ ...prev, pointsEarned: e.target.value }))}
+                                      data-testid="input-points-earned"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="points-possible">Points Possible</Label>
+                                    <Input
+                                      id="points-possible"
+                                      type="number"
+                                      placeholder="100"
+                                      value={newAssignment.pointsPossible}
+                                      onChange={(e) => setNewAssignment(prev => ({ ...prev, pointsPossible: e.target.value }))}
+                                      data-testid="input-points-possible"
+                                    />
+                                  </div>
+                                </div>
+                                <Button 
+                                  className="w-full" 
+                                  onClick={() => handleAddAssignment(course.id)}
+                                  data-testid="button-confirm-add"
+                                >
+                                  Add Assignment
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         )}
                       </CardContent>
                     </CollapsibleContent>
@@ -231,7 +379,14 @@ export default function AssignmentsPage() {
       ) : (
         <Card className="overflow-visible" data-testid="card-grade-distribution">
           <CardHeader>
-            <CardTitle>Grade Distribution</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>Grade Distribution</CardTitle>
+              {hypotheticalMode && (
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                  What-If Mode
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-80 w-full">

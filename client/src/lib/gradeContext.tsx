@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import type { Gradebook, Course, LoginCredentials } from "@shared/schema";
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
+import type { Gradebook, Course, LoginCredentials, Assignment } from "@shared/schema";
+import { getLetterGrade } from "@shared/schema";
 
 export interface GradeChange {
   courseId: string;
@@ -11,9 +12,29 @@ export interface GradeChange {
   timestamp: string;
 }
 
+export interface HypotheticalAssignment {
+  id: string;
+  name: string;
+  type: string;
+  pointsEarned: number;
+  pointsPossible: number;
+}
+
+export interface AssignmentOverride {
+  assignmentIndex: number;
+  pointsEarned: number;
+  pointsPossible: number;
+}
+
+export interface CourseOverrides {
+  modifiedAssignments: AssignmentOverride[];
+  addedAssignments: HypotheticalAssignment[];
+}
+
 interface GradeContextType {
   gradebook: Gradebook | null;
   setGradebook: (gradebook: Gradebook | null) => void;
+  hypotheticalGradebook: Gradebook | null;
   isLoggedIn: boolean;
   credentials: LoginCredentials | null;
   setCredentials: (creds: LoginCredentials | null) => void;
@@ -26,6 +47,11 @@ interface GradeContextType {
   setHypotheticalMode: (mode: boolean) => void;
   gradeChanges: GradeChange[];
   clearGradeChanges: () => void;
+  courseOverrides: Map<string, CourseOverrides>;
+  updateAssignmentScore: (courseId: string, assignmentIndex: number, pointsEarned: number, pointsPossible: number) => void;
+  addHypotheticalAssignment: (courseId: string, assignment: HypotheticalAssignment) => void;
+  removeHypotheticalAssignment: (courseId: string, assignmentId: string) => void;
+  clearAllOverrides: () => void;
 }
 
 const GradeContext = createContext<GradeContextType | undefined>(undefined);
@@ -37,8 +63,111 @@ export function GradeProvider({ children }: { children: ReactNode }) {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [hypotheticalMode, setHypotheticalMode] = useState(false);
   const [gradeChanges, setGradeChanges] = useState<GradeChange[]>([]);
+  const [courseOverrides, setCourseOverrides] = useState<Map<string, CourseOverrides>>(new Map());
 
   const isLoggedIn = gradebook !== null;
+
+  const updateAssignmentScore = (courseId: string, assignmentIndex: number, pointsEarned: number, pointsPossible: number) => {
+    setCourseOverrides(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(courseId) || { modifiedAssignments: [], addedAssignments: [] };
+      const modIdx = existing.modifiedAssignments.findIndex(m => m.assignmentIndex === assignmentIndex);
+      if (modIdx >= 0) {
+        existing.modifiedAssignments[modIdx] = { assignmentIndex, pointsEarned, pointsPossible };
+      } else {
+        existing.modifiedAssignments.push({ assignmentIndex, pointsEarned, pointsPossible });
+      }
+      newMap.set(courseId, existing);
+      return newMap;
+    });
+  };
+
+  const addHypotheticalAssignment = (courseId: string, assignment: HypotheticalAssignment) => {
+    setCourseOverrides(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(courseId) || { modifiedAssignments: [], addedAssignments: [] };
+      existing.addedAssignments.push(assignment);
+      newMap.set(courseId, existing);
+      return newMap;
+    });
+  };
+
+  const removeHypotheticalAssignment = (courseId: string, assignmentId: string) => {
+    setCourseOverrides(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(courseId);
+      if (existing) {
+        existing.addedAssignments = existing.addedAssignments.filter(a => a.id !== assignmentId);
+        newMap.set(courseId, existing);
+      }
+      return newMap;
+    });
+  };
+
+  const clearAllOverrides = () => {
+    setCourseOverrides(new Map());
+  };
+
+  const hypotheticalGradebook = useMemo(() => {
+    if (!gradebook || !hypotheticalMode) return null;
+
+    const newCourses = gradebook.courses.map(course => {
+      const overrides = courseOverrides.get(course.id);
+      if (!overrides || (overrides.modifiedAssignments.length === 0 && overrides.addedAssignments.length === 0)) {
+        return course;
+      }
+
+      let modifiedAssignments = [...course.assignments];
+      
+      overrides.modifiedAssignments.forEach(override => {
+        if (modifiedAssignments[override.assignmentIndex]) {
+          modifiedAssignments[override.assignmentIndex] = {
+            ...modifiedAssignments[override.assignmentIndex],
+            pointsEarned: override.pointsEarned,
+            pointsPossible: override.pointsPossible,
+            score: `${override.pointsEarned}/${override.pointsPossible}`,
+          };
+        }
+      });
+
+      overrides.addedAssignments.forEach(hypo => {
+        modifiedAssignments.push({
+          name: hypo.name,
+          type: hypo.type,
+          score: `${hypo.pointsEarned}/${hypo.pointsPossible}`,
+          points: `${hypo.pointsEarned} / ${hypo.pointsPossible}`,
+          pointsEarned: hypo.pointsEarned,
+          pointsPossible: hypo.pointsPossible,
+          isHypothetical: true,
+        } as Assignment & { isHypothetical: boolean });
+      });
+
+      let newGrade: number | null = course.grade;
+
+      let totalEarned = 0;
+      let totalPossible = 0;
+      modifiedAssignments.forEach(a => {
+        const earned = a.pointsEarned ?? 0;
+        const possible = a.pointsPossible ?? 0;
+        if (possible > 0) {
+          totalEarned += earned;
+          totalPossible += possible;
+        }
+      });
+      newGrade = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : course.grade;
+
+      const newLetterGrade = getLetterGrade(newGrade);
+
+      return {
+        ...course,
+        assignments: modifiedAssignments,
+        grade: newGrade,
+        letterGrade: newLetterGrade,
+      };
+    });
+
+    return { ...gradebook, courses: newCourses };
+  }, [gradebook, hypotheticalMode, courseOverrides]);
 
   const detectGradeChanges = (oldGradebook: Gradebook | null, newGradebook: Gradebook): GradeChange[] => {
     if (!oldGradebook || !newGradebook.courses) return [];
@@ -133,6 +262,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       value={{
         gradebook,
         setGradebook,
+        hypotheticalGradebook,
         isLoggedIn,
         credentials,
         setCredentials,
@@ -145,6 +275,11 @@ export function GradeProvider({ children }: { children: ReactNode }) {
         setHypotheticalMode,
         gradeChanges,
         clearGradeChanges,
+        courseOverrides,
+        updateAssignmentScore,
+        addHypotheticalAssignment,
+        removeHypotheticalAssignment,
+        clearAllOverrides,
       }}
     >
       {children}
