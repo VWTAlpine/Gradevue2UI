@@ -70,7 +70,7 @@ export async function registerRoutes(
     }
     
     // Remove duplicates
-    return [...new Set(variants)];
+    return Array.from(new Set(variants));
   }
 
   // Attempt login with fallback URL patterns
