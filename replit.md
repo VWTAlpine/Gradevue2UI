@@ -36,15 +36,25 @@ Preferred communication style: Simple, everyday language.
 - `/assignments` - Detailed assignment list with filtering
 - `/course/:id` - Individual course detail view
 - `/gpa` - GPA calculator tool
-- `/attendance` - Attendance tracking (placeholder)
+- `/attendance` - Attendance tracking with absence/tardy records
 - `/settings` - App settings and data refresh
 
 ### Data Flow
 1. User enters StudentVue credentials on login page
-2. Backend calls StudentVue API to authenticate and fetch gradebook
+2. **Hybrid Authentication**: Client-side SOAP requests attempted first for performance, with automatic server-side fallback using studentvue npm package
 3. Parsed gradebook data stored in React context
 4. All authenticated pages read from context for grade display
 5. Grade changes are tracked for notifications
+
+### Authentication Details
+- **Client-side**: Direct SOAP XML requests to StudentVue API for faster response
+- **Server fallback**: Uses `studentvue` npm package when client requests fail (CORS restrictions, etc.)
+- Credentials stored in React context for session duration
+
+### Attendance Tracking
+- StudentVue only reports absence/tardy events, not present days
+- UI displays: Total Absences, Tardies, Excused, and Unexcused counts
+- Attendance rate not shown since total school days not available from API
 
 ## External Dependencies
 
