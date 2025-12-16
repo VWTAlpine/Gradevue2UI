@@ -17,6 +17,7 @@ import GPACalculatorPage from "@/pages/gpa-calculator";
 import AttendancePage from "@/pages/attendance";
 import TermComparisonPage from "@/pages/term-comparison";
 import SettingsPage from "@/pages/settings";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -88,6 +89,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} />
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute component={ProfilePage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

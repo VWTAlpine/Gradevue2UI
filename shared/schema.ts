@@ -49,6 +49,21 @@ export const courseSchema = z.object({
 
 export type Course = z.infer<typeof courseSchema>;
 
+// Student Info Schema
+export const studentInfoSchema = z.object({
+  name: z.string(),
+  studentId: z.string(),
+  grade: z.string(),
+  school: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  birthDate: z.string().optional(),
+  counselor: z.string().optional(),
+});
+
+export type StudentInfo = z.infer<typeof studentInfoSchema>;
+
 // Gradebook Schema (main data structure from StudentVue)
 export const gradebookSchema = z.object({
   courses: z.array(courseSchema),
@@ -62,6 +77,7 @@ export const gradebookSchema = z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
   })).optional(),
+  studentInfo: studentInfoSchema.optional(),
 });
 
 export type Gradebook = z.infer<typeof gradebookSchema>;

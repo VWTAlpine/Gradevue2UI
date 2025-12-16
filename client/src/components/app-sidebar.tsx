@@ -12,6 +12,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useGrades } from "@/lib/gradeContext";
 import { getGradeBgColor } from "@shared/schema";
 import {
@@ -22,8 +23,8 @@ import {
   Settings,
   LogOut,
   GraduationCap,
-  TrendingUp,
   Layers,
+  User,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -92,9 +93,31 @@ export function AppSidebar() {
     setSelectedCourse(course);
   };
 
+  const studentInfo = gradebook?.studentInfo;
+  const initials = studentInfo?.name
+    ? studentInfo.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : "ST";
+
   return (
     <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 space-y-4">
+        <Link href="/profile" data-testid="link-profile">
+          <div className="flex items-center gap-3 rounded-lg p-2 hover-elevate active-elevate-2 cursor-pointer">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" data-testid="text-student-name">
+                {studentInfo?.name || "Student"}
+              </p>
+              <p className="text-xs text-muted-foreground" data-testid="text-student-info">
+                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}{studentInfo?.studentId ? ` - ID: ${studentInfo.studentId}` : ""}
+              </p>
+            </div>
+          </div>
+        </Link>
         <div className="flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-6 w-6 text-primary-foreground" />

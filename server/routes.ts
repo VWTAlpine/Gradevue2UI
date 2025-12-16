@@ -21,9 +21,16 @@ export async function registerRoutes(
 
       // Clean up the district URL
       let districtUrl = district.trim();
+      
+      // Remove trailing slashes
+      districtUrl = districtUrl.replace(/\/+$/, '');
+      
+      // Add https if no protocol specified
       if (!districtUrl.startsWith("http://") && !districtUrl.startsWith("https://")) {
         districtUrl = "https://" + districtUrl;
       }
+
+      console.log(`Attempting login to: ${districtUrl}`);
 
       try {
         const client = await StudentVue.login(districtUrl, {
@@ -31,10 +38,31 @@ export async function registerRoutes(
           password: password,
         });
 
-        const gradebook = await client.gradebook();
+        console.log("Login successful, fetching gradebook...");
+
+        // Fetch gradebook and student info in parallel
+        const [gradebook, studentInfo] = await Promise.all([
+          client.gradebook().catch((e: any) => {
+            console.error("Gradebook fetch error:", e.message);
+            return null;
+          }),
+          client.studentInfo().catch((e: any) => {
+            console.error("Student info fetch error:", e.message);
+            return null;
+          }),
+        ]);
         
+        if (!gradebook) {
+          return res.status(500).json({
+            success: false,
+            error: "Successfully logged in but could not fetch gradebook data. This may be a temporary issue - please try again."
+          });
+        }
+
         // Parse the gradebook data into our schema format
-        const parsedGradebook = parseGradebook(gradebook);
+        const parsedGradebook = parseGradebook(gradebook, studentInfo);
+        
+        console.log(`Fetched ${parsedGradebook.courses?.length || 0} courses`);
         
         return res.json({ 
           success: true, 
@@ -42,9 +70,35 @@ export async function registerRoutes(
         });
       } catch (loginError: any) {
         console.error("StudentVue login error:", loginError.message);
+        console.error("Full error:", loginError);
+        
+        // Provide more specific error messages
+        const errorMsg = loginError.message?.toLowerCase() || '';
+        
+        if (errorMsg.includes('invalid') || errorMsg.includes('incorrect') || errorMsg.includes('password') || errorMsg.includes('username')) {
+          return res.status(401).json({ 
+            success: false, 
+            error: "Invalid username or password. Please check your credentials." 
+          });
+        }
+        
+        if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused')) {
+          return res.status(400).json({ 
+            success: false, 
+            error: "Could not connect to the district server. Please check your district URL." 
+          });
+        }
+        
+        if (errorMsg.includes('timeout')) {
+          return res.status(504).json({ 
+            success: false, 
+            error: "Connection timed out. The district server may be slow or unavailable." 
+          });
+        }
+        
         return res.status(401).json({ 
           success: false, 
-          error: "Login failed. Please check your credentials and district URL. Make sure you don't include @domain in your username." 
+          error: `Login failed: ${loginError.message || 'Please check your credentials and district URL.'}` 
         });
       }
     } catch (err: any) {
@@ -69,7 +123,7 @@ export async function registerRoutes(
 }
 
 // Parse StudentVue gradebook response into our schema format
-function parseGradebook(gradebook: any) {
+function parseGradebook(gradebook: any, studentInfo: any = null) {
   const courses: any[] = [];
   
   try {
@@ -158,10 +212,31 @@ function parseGradebook(gradebook: any) {
     // Use defaults
   }
 
+  // Parse student info
+  let parsedStudentInfo = null;
+  if (studentInfo) {
+    try {
+      parsedStudentInfo = {
+        name: studentInfo.student?.name || studentInfo.formattedName || "Student",
+        studentId: studentInfo.student?.id || studentInfo.permId || "",
+        grade: studentInfo.grade || studentInfo.currentGradeLevel || "",
+        school: studentInfo.currentSchool || "",
+        email: studentInfo.email || "",
+        phone: studentInfo.phone || "",
+        address: studentInfo.address || "",
+        birthDate: studentInfo.birthDate || "",
+        counselor: studentInfo.counselor?.name || "",
+      };
+    } catch (e) {
+      console.error("Error parsing student info:", e);
+    }
+  }
+
   return {
     courses,
     reportingPeriod,
     reportingPeriods: gradebook.reportingPeriods || [],
+    studentInfo: parsedStudentInfo,
   };
 }
 
@@ -451,5 +526,14 @@ function generateDemoData() {
       { name: "Fall Semester 2024", startDate: "Aug 26, 2024", endDate: "Dec 20, 2024" },
       { name: "Spring Semester 2024", startDate: "Jan 8, 2024", endDate: "May 24, 2024" },
     ],
+    studentInfo: {
+      name: "Alex Johnson",
+      studentId: "123456",
+      grade: "11",
+      school: "Westview High School",
+      email: "alex.johnson@student.westview.edu",
+      phone: "(555) 123-4567",
+      counselor: "Ms. Williams",
+    },
   };
 }
