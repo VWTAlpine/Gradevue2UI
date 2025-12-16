@@ -262,6 +262,100 @@ export async function registerRoutes(
     });
   });
 
+  // Attendance endpoint
+  app.post("/api/studentvue/attendance", async (req, res) => {
+    try {
+      const { district, username, password } = req.body;
+
+      if (!district || !username || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required credentials" 
+        });
+      }
+
+      const districtUrl = normalizeDistrictUrl(district);
+      const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+      
+      if (!loginResult.client) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Authentication failed" 
+        });
+      }
+
+      try {
+        const attendance = await loginResult.client.attendance();
+        const records: any[] = [];
+        let totalAbsences = 0;
+        let totalTardies = 0;
+        let totalExcused = 0;
+        let totalUnexcused = 0;
+
+        const absences = attendance?.absences || [];
+        for (const absence of absences) {
+          const reason = absence.reason || "";
+          const reasonLower = reason.toLowerCase();
+          
+          // Determine status based on reason
+          let status = "Absent";
+          if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+            status = "Tardy";
+            totalTardies++;
+          } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+            status = "Excused";
+            totalExcused++;
+            totalAbsences++;
+          } else {
+            totalAbsences++;
+            totalUnexcused++;
+          }
+          
+          // Handle multiple periods
+          const periods = absence.periods || [0];
+          for (const period of periods) {
+            records.push({
+              date: absence.date || "",
+              period: period,
+              course: absence.note || "",
+              status: status,
+              reason: reason,
+            });
+          }
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            totalAbsences,
+            totalTardies,
+            totalExcused,
+            totalUnexcused,
+            records,
+          },
+        });
+      } catch (fetchErr: any) {
+        console.error("Attendance fetch error:", fetchErr);
+        return res.json({
+          success: true,
+          data: {
+            totalAbsences: 0,
+            totalTardies: 0,
+            totalExcused: 0,
+            totalUnexcused: 0,
+            records: [],
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error("Attendance endpoint error:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message 
+      });
+    }
+  });
+
   return httpServer;
 }
 
@@ -369,6 +463,7 @@ function parseGradebook(gradebook: any, studentInfo: any = null) {
         address: studentInfo.address || "",
         birthDate: studentInfo.birthDate || "",
         counselor: studentInfo.counselor?.name || "",
+        photo: studentInfo.photo || studentInfo.base64Photo || "",
       };
     } catch (e) {
       console.error("Error parsing student info:", e);

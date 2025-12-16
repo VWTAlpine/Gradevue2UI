@@ -36,36 +36,69 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      console.log("Attempting client-side login to:", district);
-      
-      const client = new StudentVueClient(district, username, password);
-      
-      await client.checkLogin();
-      console.log("Login successful, fetching gradebook...");
-      
-      const [gradebook, studentInfo] = await Promise.all([
-        client.gradebook().catch((e) => {
-          console.error("Gradebook fetch error:", e);
-          return null;
-        }),
-        client.studentInfo().catch((e) => {
-          console.error("Student info fetch error:", e);
-          return null;
-        }),
-      ]);
+      let parsedData = null;
+      let loginMethod = "";
 
-      if (!gradebook) {
-        throw new Error("Successfully logged in but could not fetch gradebook data. Please try again.");
+      // Try client-side login first (direct browser to StudentVue)
+      try {
+        console.log("Attempting client-side login to:", district);
+        const client = new StudentVueClient(district, username, password);
+        
+        await client.checkLogin();
+        console.log("Client-side login successful, fetching gradebook...");
+        
+        const [gradebook, studentInfo] = await Promise.all([
+          client.gradebook().catch((e) => {
+            console.error("Gradebook fetch error:", e);
+            return null;
+          }),
+          client.studentInfo().catch((e) => {
+            console.error("Student info fetch error:", e);
+            return null;
+          }),
+        ]);
+
+        if (gradebook) {
+          parsedData = parseGradebook(gradebook, studentInfo);
+          loginMethod = "client";
+          console.log(`Client-side: Fetched ${parsedData.courses?.length || 0} courses`);
+        }
+      } catch (clientError: any) {
+        console.log("Client-side login failed, trying server-side:", clientError.message);
       }
 
-      const parsedData = parseGradebook(gradebook, studentInfo);
-      console.log(`Fetched ${parsedData.courses?.length || 0} courses`);
+      // If client-side failed, try server-side
+      if (!parsedData) {
+        console.log("Attempting server-side login...");
+        const res = await fetch("/api/studentvue/login", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          body: JSON.stringify({ district, username, password }),
+          credentials: "include",
+        });
+        const response = await res.json();
+
+        if (response.success && response.data) {
+          parsedData = response.data;
+          loginMethod = "server";
+          console.log(`Server-side: Fetched ${parsedData.courses?.length || 0} courses`);
+        } else {
+          throw new Error(response.error || "Login failed");
+        }
+      }
+
+      if (!parsedData) {
+        throw new Error("Could not fetch gradebook data. Please try again.");
+      }
       
       setGradebook(parsedData);
       setCredentials({ district, username, password });
       toast({
         title: "Success",
-        description: "Successfully logged in to StudentVue",
+        description: `Successfully logged in to StudentVue`,
       });
       setLocation("/dashboard");
     } catch (error: any) {

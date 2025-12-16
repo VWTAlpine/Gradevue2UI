@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGrades } from "@/lib/gradeContext";
 import { getGradeBgColor } from "@shared/schema";
 import {
@@ -100,32 +100,39 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 space-y-4">
+      <SidebarHeader className="p-4 space-y-3">
         <Link href="/profile" data-testid="link-profile">
-          <div className="flex items-center gap-3 rounded-lg p-2 hover-elevate active-elevate-2 cursor-pointer">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+          <div className="flex flex-col items-center gap-3 rounded-lg p-3 hover-elevate active-elevate-2 cursor-pointer">
+            <Avatar className="h-16 w-16">
+              {studentInfo?.photo && studentInfo.photo.length > 10 && (
+                <AvatarImage 
+                  src={studentInfo.photo.startsWith("data:") ? studentInfo.photo : (studentInfo.photo.startsWith("/9j") || studentInfo.photo.match(/^[A-Za-z0-9+/=]+$/) ? `data:image/jpeg;base64,${studentInfo.photo}` : studentInfo.photo)} 
+                  alt={studentInfo.name || "Student"} 
+                />
+              )}
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" data-testid="text-student-name">
+            <div className="text-center min-w-0 w-full">
+              <p className="text-base font-semibold truncate" data-testid="text-student-name">
                 {studentInfo?.name || "Student"}
               </p>
-              <p className="text-xs text-muted-foreground" data-testid="text-student-info">
-                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}{studentInfo?.studentId ? ` - ID: ${studentInfo.studentId}` : ""}
+              <p className="text-sm text-muted-foreground" data-testid="text-student-info">
+                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}{studentInfo?.school ? ` - ${studentInfo.school}` : ""}
               </p>
+              {studentInfo?.studentId && (
+                <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-student-id">
+                  ID: {studentInfo.studentId}
+                </p>
+              )}
             </div>
           </div>
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <GraduationCap className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Current GPA</p>
-            <p className="text-2xl font-bold text-foreground">{calculateOverallGPA()}</p>
-          </div>
+        <div className="flex items-center justify-center gap-2 py-1">
+          <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">GPA:</span>
+          <span className="text-sm font-medium text-foreground">{calculateOverallGPA()}</span>
         </div>
       </SidebarHeader>
 

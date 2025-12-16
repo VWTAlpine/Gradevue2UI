@@ -60,6 +60,7 @@ export const studentInfoSchema = z.object({
   address: z.string().optional(),
   birthDate: z.string().optional(),
   counselor: z.string().optional(),
+  photo: z.string().optional(),
 });
 
 export type StudentInfo = z.infer<typeof studentInfoSchema>;

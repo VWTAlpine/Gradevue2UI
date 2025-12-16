@@ -144,6 +144,96 @@ export class StudentVueClient {
   }
 }
 
+export interface ParsedAttendance {
+  totalAbsences: number;
+  totalTardies: number;
+  totalExcused: number;
+  totalUnexcused: number;
+  records: ParsedAttendanceRecord[];
+}
+
+export interface ParsedAttendanceRecord {
+  date: string;
+  period: number;
+  course: string;
+  status: string;
+  reason: string;
+}
+
+export function parseAttendance(attendance: any): ParsedAttendance {
+  const records: ParsedAttendanceRecord[] = [];
+  let totalAbsences = 0;
+  let totalTardies = 0;
+  let totalExcused = 0;
+  let totalUnexcused = 0;
+
+  try {
+    // Try SOAP response format first (from client-side)
+    const absences = attendance?.Absences?.Absence || attendance?.absences || [];
+    const absenceList = Array.isArray(absences) ? absences : (absences ? [absences] : []);
+
+    for (const absence of absenceList) {
+      if (!absence) continue;
+
+      // Handle both SOAP attributes (_Periods) and npm client format (periods)
+      const periods = absence._Periods || absence.periods || "";
+      const periodList = typeof periods === "string" 
+        ? periods.split(",").filter((p: string) => p.trim())
+        : (Array.isArray(periods) ? periods : [periods]);
+      
+      const dateVal = absence._AbsenceDate || absence.date || "";
+      const reason = absence._Reason || absence.reason || "";
+      const note = absence._Note || absence.note || "";
+      
+      // Determine status based on reason text
+      let status = "Absent";
+      const reasonLower = reason.toLowerCase();
+      if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+        status = "Tardy";
+        totalTardies++;
+      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+        status = "Excused";
+        totalExcused++;
+        totalAbsences++;
+      } else {
+        totalAbsences++;
+        totalUnexcused++;
+      }
+      
+      // Create one record per period or one if no periods
+      if (periodList.length === 0) {
+        records.push({
+          date: dateVal,
+          period: 0,
+          course: note,
+          status: status,
+          reason: reason,
+        });
+      } else {
+        for (const period of periodList) {
+          records.push({
+            date: dateVal,
+            period: typeof period === "number" ? period : (parseInt(period) || 0),
+            course: note,
+            status: status,
+            reason: reason,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing attendance:", e);
+  }
+
+  return {
+    totalAbsences,
+    totalTardies,
+    totalExcused,
+    totalUnexcused,
+    records,
+  };
+}
+
 export interface ParsedGradebook {
   courses: ParsedCourse[];
   reportingPeriod: {
@@ -308,6 +398,7 @@ export function parseGradebook(gradebook: any, studentInfo: any = null): ParsedG
         address: studentInfo._Address || studentInfo.Address || "",
         birthDate: studentInfo._BirthDate || studentInfo.BirthDate || "",
         counselor: studentInfo._CounselorName || studentInfo.CounselorName || "",
+        photo: studentInfo._Photo || studentInfo.Photo || studentInfo.Base64Photo || "",
       };
     } catch (e) {
       console.error("Error parsing student info:", e);
