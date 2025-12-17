@@ -59,7 +59,7 @@ export default function CourseDetailPage() {
     clearAllOverrides,
   } = useGrades();
 
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  const [chartType, setChartType] = useState<"bar" | "line">("line");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     name: "",
@@ -168,8 +168,9 @@ export default function CourseDetailPage() {
     );
   }
 
-  const hasMultipleCategories = categoryChartData.length > 1;
-  const hasSingleCategory = categoryChartData.length === 1;
+  const hasCategories = categoryChartData.length > 0;
+  const hasAssignmentHistory = gradeHistoryData.length > 0;
+  const showChartToggle = hasCategories && hasAssignmentHistory;
 
   return (
     <div className="space-y-4">
@@ -195,7 +196,7 @@ export default function CourseDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              {hasMultipleCategories && (
+              {showChartToggle && (
                 <div className="flex items-center gap-2 rounded-lg border p-1">
                   <Button
                     variant={chartType === "bar" ? "secondary" : "ghost"}
@@ -204,7 +205,7 @@ export default function CourseDetailPage() {
                     data-testid="button-chart-bar"
                   >
                     <BarChart3 className="mr-1 h-4 w-4" />
-                    Bar
+                    Categories
                   </Button>
                   <Button
                     variant={chartType === "line" ? "secondary" : "ghost"}
@@ -213,7 +214,7 @@ export default function CourseDetailPage() {
                     data-testid="button-chart-line"
                   >
                     <LineChart className="mr-1 h-4 w-4" />
-                    Line
+                    Grades
                   </Button>
                 </div>
               )}
@@ -229,10 +230,10 @@ export default function CourseDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {hasMultipleCategories && (
+          {(hasAssignmentHistory || hasCategories) && (
             <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                {chartType === "bar" ? (
+                {chartType === "bar" && hasCategories ? (
                   <BarChart
                     data={categoryChartData}
                     margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
@@ -270,21 +271,23 @@ export default function CourseDetailPage() {
                       ))}
                     </Bar>
                   </BarChart>
-                ) : (
+                ) : hasAssignmentHistory ? (
                   <RechartsLineChart
-                    data={gradeHistoryData.length > 0 ? gradeHistoryData : categoryChartData}
+                    data={gradeHistoryData}
                     margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
-                      dataKey={gradeHistoryData.length > 0 ? "index" : "name"}
+                      dataKey="index"
                       tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
+                      label={{ value: "Assignment #", position: "insideBottom", offset: -5, fontSize: 10 }}
                     />
                     <YAxis
                       domain={[0, 100]}
                       tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
+                      label={{ value: "Score %", angle: -90, position: "insideLeft", fontSize: 10 }}
                     />
                     <Tooltip
                       content={({ active, payload }) => {
@@ -292,7 +295,7 @@ export default function CourseDetailPage() {
                           const data = payload[0].payload;
                           return (
                             <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
-                              <p className="font-medium">{data.fullName || data.name}</p>
+                              <p className="font-medium">{data.fullName}</p>
                               <p className="text-muted-foreground">
                                 Score: {data.score.toFixed(1)}%
                               </p>
@@ -311,95 +314,45 @@ export default function CourseDetailPage() {
                       activeDot={{ r: 5 }}
                     />
                   </RechartsLineChart>
+                ) : (
+                  <BarChart
+                    data={categoryChartData}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11 }}
+                      className="fill-muted-foreground"
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      tick={{ fontSize: 11 }}
+                      className="fill-muted-foreground"
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
+                              <p className="font-medium">{data.name}</p>
+                              <p className="text-muted-foreground">
+                                Score: {data.score.toFixed(1)}%
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                      {categoryChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 )}
-              </ResponsiveContainer>
-            </div>
-          )}
-          {hasSingleCategory && (
-            <div className="h-48 w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Score", value: categoryChartData[0].score, fill: categoryColors[0] },
-                      { name: "Remaining", value: 100 - categoryChartData[0].score, fill: "hsl(var(--muted))" },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    dataKey="value"
-                    startAngle={90}
-                    endAngle={-270}
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length && payload[0].name === "Score") {
-                        return (
-                          <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
-                            <p className="font-medium">{categoryChartData[0].name}</p>
-                            <p className="text-muted-foreground">
-                              Score: {categoryChartData[0].score.toFixed(1)}%
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className={`text-2xl font-bold ${getGradeColor(displayLetter)}`}>
-                  {categoryChartData[0].score.toFixed(1)}%
-                </span>
-                <span className="text-xs text-muted-foreground">{categoryChartData[0].name}</span>
-              </div>
-            </div>
-          )}
-          {!hasMultipleCategories && !hasSingleCategory && gradeHistoryData.length > 0 && (
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsLineChart
-                  data={gradeHistoryData}
-                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="index"
-                    tick={{ fontSize: 11 }}
-                    className="fill-muted-foreground"
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                    className="fill-muted-foreground"
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
-                            <p className="font-medium">{data.fullName}</p>
-                            <p className="text-muted-foreground">
-                              Score: {data.score.toFixed(1)}%
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
-                </RechartsLineChart>
               </ResponsiveContainer>
             </div>
           )}
