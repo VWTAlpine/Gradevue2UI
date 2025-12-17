@@ -3,6 +3,8 @@ import { useRoute, useLocation } from "wouter";
 import { useGrades } from "@/lib/gradeContext";
 import { AssignmentRow } from "@/components/assignment-row";
 import { CategoryBreakdownCompact } from "@/components/category-breakdown";
+import { AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,14 +85,68 @@ export default function CourseDetailPage() {
 
   const course = courseId ? courses[parseInt(courseId)] : selectedCourse;
 
-  const categoryChartData = useMemo(() => {
+  // Calculate category scores from assignments if API returns 0
+  const computedCategories = useMemo(() => {
     if (!course?.categories) return [];
-    return course.categories.map((cat, index) => ({
+    
+    return course.categories.map((cat) => {
+      // If score is already populated, use it
+      if (cat.score > 0) {
+        return cat;
+      }
+      
+      // Calculate from assignments
+      if (course.assignments && course.assignments.length > 0) {
+        const categoryAssignments = course.assignments.filter(a => a.type === cat.name);
+        let totalEarned = 0;
+        let totalPossible = 0;
+        
+        for (const a of categoryAssignments) {
+          if (a.pointsEarned !== null && a.pointsEarned !== undefined && 
+              a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0) {
+            totalEarned += a.pointsEarned;
+            totalPossible += a.pointsPossible;
+          } else if (a.points) {
+            const pointsMatch = a.points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+            if (pointsMatch) {
+              totalEarned += parseFloat(pointsMatch[1]) || 0;
+              totalPossible += parseFloat(pointsMatch[2]) || 0;
+            }
+          } else if (a.score && a.score !== "Not Graded" && a.score !== "N/A") {
+            const scoreMatch = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
+            if (scoreMatch) {
+              totalEarned += parseFloat(scoreMatch[1]) || 0;
+              totalPossible += parseFloat(scoreMatch[2]) || 0;
+            }
+          }
+        }
+        
+        const calculatedScore = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+        return { ...cat, score: calculatedScore };
+      }
+      
+      return cat;
+    });
+  }, [course]);
+
+  const categoryChartData = useMemo(() => {
+    if (!computedCategories || computedCategories.length === 0) return [];
+    return computedCategories.map((cat, index) => ({
       name: cat.name,
       score: cat.score,
       weight: cat.weight,
       color: categoryColors[index % categoryColors.length],
     }));
+  }, [computedCategories]);
+
+  // Detect missing assignments
+  const missingAssignments = useMemo(() => {
+    if (!course?.assignments) return [];
+    return course.assignments.filter(a => {
+      const scoreLower = (a.score || "").toLowerCase();
+      const notesLower = (a.notes || "").toLowerCase();
+      return scoreLower.includes("missing") || notesLower.includes("missing");
+    });
   }, [course]);
 
   // Same parseScore logic as AssignmentRow - handles all data formats
@@ -568,7 +624,17 @@ export default function CourseDetailPage() {
         </Card>
       )}
 
-      <CategoryBreakdownCompact categories={course.categories || []} />
+      <CategoryBreakdownCompact categories={computedCategories} />
+
+      {missingAssignments.length > 0 && (
+        <Alert variant="destructive" data-testid="alert-missing-assignments">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="ml-2">
+            <span className="font-semibold">{missingAssignments.length} missing assignment{missingAssignments.length !== 1 ? 's' : ''}</span>
+            {' '}detected in this course
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="overflow-visible" data-testid="card-assignments">
         <CardHeader className="pb-3">
