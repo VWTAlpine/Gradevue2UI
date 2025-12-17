@@ -95,8 +95,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 space-y-3">
-        <div className="flex justify-center pb-2">
+      <SidebarHeader className="p-4 shrink-0">
+        <div className="flex justify-center">
           <img 
             src={logoImage} 
             alt="GradeVue Logo" 
@@ -104,49 +104,51 @@ export function AppSidebar() {
             data-testid="img-sidebar-logo"
           />
         </div>
-        {studentInfo?.school && (
-          <div className="flex items-center gap-2 text-center justify-center pb-2 border-b border-sidebar-border">
-            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm font-medium truncate" data-testid="text-school-name">
-              {studentInfo.school}
-            </span>
-          </div>
-        )}
-        <Link href="/profile" data-testid="link-profile">
-          <div className="flex flex-col items-center gap-3 rounded-lg p-3 hover-elevate active-elevate-2 cursor-pointer">
-            <Avatar className="h-16 w-16 shrink-0">
-              <AvatarImage 
-                src={studentInfo?.photo ? (studentInfo.photo.startsWith("data:") ? studentInfo.photo : `data:image/jpeg;base64,${studentInfo.photo}`) : undefined} 
-                alt={studentInfo?.name || "Student"}
-                className="object-cover"
-              />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-center min-w-0 w-full">
-              <p className="text-base font-semibold truncate" data-testid="text-student-name">
-                {studentInfo?.name || "Student"}
-              </p>
-              <p className="text-sm text-muted-foreground" data-testid="text-student-info">
-                {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}
-              </p>
-              {studentInfo?.studentId && (
-                <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-student-id">
-                  ID: {studentInfo.studentId}
-                </p>
-              )}
-            </div>
-          </div>
-        </Link>
-        <div className="flex items-center justify-center gap-2 py-1">
-          <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">GPA:</span>
-          <span className="text-sm font-medium text-foreground">{calculateOverallGPA()}</span>
-        </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto">
+        <SidebarGroup className="p-4 pt-0 space-y-3">
+          {studentInfo?.school && (
+            <div className="flex items-center gap-2 text-center justify-center pb-2 border-b border-sidebar-border">
+              <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium truncate" data-testid="text-school-name">
+                {studentInfo.school}
+              </span>
+            </div>
+          )}
+          <Link href="/profile" data-testid="link-profile">
+            <div className="flex flex-col items-center gap-3 rounded-lg p-3 hover-elevate active-elevate-2 cursor-pointer">
+              <Avatar className="h-16 w-16 shrink-0">
+                <AvatarImage 
+                  src={studentInfo?.photo ? (studentInfo.photo.startsWith("data:") ? studentInfo.photo : `data:image/jpeg;base64,${studentInfo.photo}`) : undefined} 
+                  alt={studentInfo?.name || "Student"}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-center min-w-0 w-full">
+                <p className="text-base font-semibold truncate" data-testid="text-student-name">
+                  {studentInfo?.name || "Student"}
+                </p>
+                <p className="text-sm text-muted-foreground" data-testid="text-student-info">
+                  {studentInfo?.grade ? `Grade ${studentInfo.grade}` : ""}
+                </p>
+                {studentInfo?.studentId && (
+                  <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-student-id">
+                    ID: {studentInfo.studentId}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+          <div className="flex items-center justify-center gap-2 py-1">
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">GPA:</span>
+            <span className="text-sm font-medium text-foreground">{calculateOverallGPA()}</span>
+          </div>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
