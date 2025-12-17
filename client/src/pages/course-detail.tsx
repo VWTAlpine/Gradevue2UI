@@ -93,42 +93,78 @@ export default function CourseDetailPage() {
     }));
   }, [course]);
 
+  // Same parseScore logic as AssignmentRow - handles all data formats
+  const getAssignmentPercentage = (a: any): number | null => {
+    // Check numeric fields first
+    if (a.pointsEarned !== null && a.pointsEarned !== undefined &&
+        a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0) {
+      return (a.pointsEarned / a.pointsPossible) * 100;
+    }
+    
+    const score = a.score;
+    const points = a.points;
+    
+    if (!score || score === "Not Graded" || score === "N/A") {
+      // Still try points field
+      if (points) {
+        const pointsMatch = points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+        if (pointsMatch) {
+          const earned = parseFloat(pointsMatch[1]);
+          const max = parseFloat(pointsMatch[2]);
+          return max > 0 ? (earned / max) * 100 : null;
+        }
+      }
+      return null;
+    }
+
+    // Check score for "X out of Y" or "X/Y" format
+    const scoreMatch = score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
+    if (scoreMatch) {
+      const earned = parseFloat(scoreMatch[1]);
+      const max = parseFloat(scoreMatch[2]);
+      return max > 0 ? (earned / max) * 100 : null;
+    }
+
+    // Check points field for "X/Y" format
+    if (points) {
+      const pointsMatch = points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+      if (pointsMatch) {
+        const earned = parseFloat(pointsMatch[1]);
+        const max = parseFloat(pointsMatch[2]);
+        return max > 0 ? (earned / max) * 100 : null;
+      }
+    }
+
+    // Try parsing score as a simple number (percentage)
+    const simpleNumber = parseFloat(score);
+    if (!isNaN(simpleNumber)) {
+      return simpleNumber;
+    }
+
+    return null;
+  };
+
   const gradeHistoryData = useMemo(() => {
     if (!course?.assignments) return [];
     
-    const gradedAssignments = course.assignments
-      .filter(a => {
-        // Check if assignment has valid grade data
-        const hasNumericPoints = a.pointsEarned !== null && a.pointsEarned !== undefined && a.pointsPossible && a.pointsPossible > 0;
-        const hasPointsString = a.points && a.points.includes("/") && !a.points.startsWith("0/");
-        const isNotGraded = a.score?.toLowerCase().includes("not graded") || a.score?.toLowerCase().includes("not due");
-        return (hasNumericPoints || hasPointsString) && !isNotGraded;
-      })
-      .slice()
-      .reverse()
-      .slice(0, 15);
+    // Get all assignments and calculate percentages
+    const withScores = course.assignments
+      .map((a, originalIdx) => ({
+        assignment: a,
+        percentage: getAssignmentPercentage(a),
+        originalIdx,
+      }))
+      .filter(item => item.percentage !== null);
     
-    return gradedAssignments.map((a, idx) => {
-      let score = 0;
-      // Prioritize numeric fields first (more reliable)
-      if (a.pointsEarned !== null && a.pointsEarned !== undefined && a.pointsPossible && a.pointsPossible > 0) {
-        score = (a.pointsEarned / a.pointsPossible) * 100;
-      } else {
-        // Fallback to parsing points string
-        const pointsMatch = a.points?.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
-        if (pointsMatch) {
-          const earned = parseFloat(pointsMatch[1]);
-          const possible = parseFloat(pointsMatch[2]);
-          score = possible > 0 ? (earned / possible) * 100 : 0;
-        }
-      }
-      return {
-        name: a.name.length > 15 ? a.name.substring(0, 15) + "..." : a.name,
-        fullName: a.name,
-        score: Math.round(score * 10) / 10,
-        index: idx + 1,
-      };
-    });
+    // Take the last 20 graded assignments (reverse to show oldest first)
+    const recent = withScores.slice().reverse().slice(0, 20);
+    
+    return recent.map((item, idx) => ({
+      name: item.assignment.name.length > 15 ? item.assignment.name.substring(0, 15) + "..." : item.assignment.name,
+      fullName: item.assignment.name,
+      score: Math.round((item.percentage as number) * 10) / 10,
+      index: idx + 1,
+    }));
   }, [course]);
 
   const displayGrade = course?.grade ?? 0;
