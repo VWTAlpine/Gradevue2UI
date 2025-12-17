@@ -59,21 +59,13 @@ export default function DashboardPage() {
     courses.forEach((course) => {
       course.assignments.forEach((a) => {
         const scoreLower = a.score?.toLowerCase() || "";
+        const notesLower = a.notes?.toLowerCase() || "";
         if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
           count++;
           return;
         }
-        if (a.pointsEarned === 0 && a.pointsPossible && a.pointsPossible > 0) {
+        if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
           count++;
-          return;
-        }
-        const pointsMatch = a.points?.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-        if (pointsMatch) {
-          const earned = parseFloat(pointsMatch[1]);
-          const possible = parseFloat(pointsMatch[2]);
-          if (earned === 0 && possible > 0) {
-            count++;
-          }
         }
       });
     });

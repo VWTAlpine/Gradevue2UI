@@ -20,7 +20,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
-import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Edit2 } from "lucide-react";
+import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -333,6 +340,26 @@ export default function AssignmentsPage() {
                                     data-testid="input-assignment-name"
                                   />
                                 </div>
+                                {course.categories && course.categories.length > 0 && (
+                                  <div className="space-y-2">
+                                    <Label>Category</Label>
+                                    <Select
+                                      value={newAssignment.type}
+                                      onValueChange={(value) => setNewAssignment(prev => ({ ...prev, type: value }))}
+                                    >
+                                      <SelectTrigger data-testid="select-category">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {course.categories.map((cat) => (
+                                          <SelectItem key={cat.name} value={cat.name}>
+                                            {cat.name} ({cat.weight}%)
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <Label htmlFor="points-earned">Points Earned</Label>
