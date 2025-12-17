@@ -55,17 +55,32 @@ export default function DashboardPage() {
   const courses = gradebook?.courses || [];
 
   const countMissingAssignments = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     let count = 0;
     courses.forEach((course) => {
       course.assignments.forEach((a) => {
         const scoreLower = a.score?.toLowerCase() || "";
         const notesLower = a.notes?.toLowerCase() || "";
-        if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
+        
+        // Explicit missing markers
+        if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower.includes("not turned in")) {
           count++;
           return;
         }
         if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
           count++;
+          return;
+        }
+        
+        // Check if "Not Graded" with past due date = likely missing
+        const isUngraded = !a.score || scoreLower === "not graded" || scoreLower === "n/a" || scoreLower === "";
+        if (isUngraded && a.dueDate) {
+          const dueDate = new Date(a.dueDate);
+          if (!isNaN(dueDate.getTime()) && dueDate < today) {
+            count++;
+          }
         }
       });
     });

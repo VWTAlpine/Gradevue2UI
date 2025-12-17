@@ -13,15 +13,30 @@ interface GradeCardProps {
 }
 
 function countMissingAssignments(course: Course): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
   return course.assignments.filter((a) => {
     const scoreLower = a.score?.toLowerCase() || "";
     const notesLower = a.notes?.toLowerCase() || "";
-    if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
+    
+    // Explicit missing markers
+    if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower.includes("not turned in")) {
       return true;
     }
     if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
       return true;
     }
+    
+    // Check if "Not Graded" with past due date = likely missing
+    const isUngraded = !a.score || scoreLower === "not graded" || scoreLower === "n/a" || scoreLower === "";
+    if (isUngraded && a.dueDate) {
+      const dueDate = new Date(a.dueDate);
+      if (!isNaN(dueDate.getTime()) && dueDate < today) {
+        return true;
+      }
+    }
+    
     return false;
   }).length;
 }
