@@ -25,7 +25,7 @@ import {
   GraduationCap,
   Building,
 } from "lucide-react";
-import logoImage from "@assets/Gradevue_Design_Pack_(2)_1765931756566.png";
+import logoImage from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
 
 const mainNavItems = [
   {
@@ -100,7 +100,7 @@ export function AppSidebar() {
           <img 
             src={logoImage} 
             alt="GradeVue Logo" 
-            className="h-12 w-auto object-contain"
+            className="h-16 w-auto object-contain"
             data-testid="img-sidebar-logo"
           />
         </div>

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useGrades } from "@/lib/gradeContext";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoImage from "@assets/Gradevue_Design_Pack_(2)_1765931756566.png";
+import logoImage from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
 import { GraduationCap, Lock, User, Globe, Loader2, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { StudentVueClient, parseGradebook } from "@/lib/studentvue-client";
@@ -194,7 +194,7 @@ export default function LoginPage() {
               <img 
                 src={logoImage} 
                 alt="GradeVue Logo" 
-                className="mx-auto h-24 w-auto object-contain"
+                className="mx-auto h-32 w-auto object-contain"
                 data-testid="img-login-logo"
               />
             </div>
