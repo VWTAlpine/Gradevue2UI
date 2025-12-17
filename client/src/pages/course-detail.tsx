@@ -142,10 +142,33 @@ export default function CourseDetailPage() {
   // Detect missing assignments
   const missingAssignments = useMemo(() => {
     if (!course?.assignments) return [];
+    const now = new Date();
+    
     return course.assignments.filter(a => {
       const scoreLower = (a.score || "").toLowerCase();
       const notesLower = (a.notes || "").toLowerCase();
-      return scoreLower.includes("missing") || notesLower.includes("missing");
+      
+      // Explicit "missing" in score or notes
+      if (scoreLower.includes("missing") || notesLower.includes("missing")) {
+        return true;
+      }
+      
+      // "Not Graded" with a past due date is likely missing
+      if (scoreLower === "not graded" || scoreLower === "n/a" || scoreLower === "") {
+        if (a.dueDate) {
+          const dueDate = new Date(a.dueDate);
+          // Check if due date is valid and in the past
+          if (!isNaN(dueDate.getTime()) && dueDate < now) {
+            // Also check if there are 0 points earned (confirms it's missing, not just ungraded)
+            if (a.pointsEarned === 0 || 
+                (a.points && a.points.match(/^0\s*\/\s*[\d.]+/))) {
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
     });
   }, [course]);
 
