@@ -4,7 +4,8 @@ import { StudentVueClient, parseAttendance, type ParsedAttendanceRecord } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -438,24 +439,36 @@ export default function AttendancePage() {
           ) : (
             <div className="space-y-3">
               {attendanceRecords.map((record, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border bg-card p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    {getStatusIcon(record.status)}
-                    <div>
-                      <p className="font-medium">{record.date}</p>
-                      {record.course && (
+                <Collapsible key={index}>
+                  <div className="rounded-lg border bg-card">
+                    <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover-elevate">
+                      <div className="flex items-center gap-4">
+                        {getStatusIcon(record.status)}
+                        <div className="text-left">
+                          <p className="font-medium">{record.date}</p>
+                          {record.course && (
+                            <p className="text-sm text-muted-foreground">
+                              {record.course}
+                              {record.period ? ` - Period ${record.period}` : ""}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(record.status)}
+                        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="border-t px-4 py-3">
                         <p className="text-sm text-muted-foreground">
-                          {record.course}
-                          {record.period && ` - Period ${record.period}`}
+                          <span className="font-medium text-foreground">Reason: </span>
+                          {record.reason || "No description provided"}
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    </CollapsibleContent>
                   </div>
-                  {getStatusBadge(record.status)}
-                </div>
+                </Collapsible>
               ))}
             </div>
           )}
