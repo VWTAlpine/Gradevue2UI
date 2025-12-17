@@ -100,7 +100,7 @@ export function AppSidebar() {
           <img 
             src={logoImage} 
             alt="GradeVue Logo" 
-            className="h-16 w-auto object-contain"
+            className="h-20 w-auto object-cover scale-[2.5]"
             data-testid="img-sidebar-logo"
           />
         </div>
