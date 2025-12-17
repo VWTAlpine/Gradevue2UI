@@ -97,20 +97,30 @@ export default function CourseDetailPage() {
     if (!course?.assignments) return [];
     
     const gradedAssignments = course.assignments
-      .filter(a => a.score && !a.score.includes("Not Graded"))
+      .filter(a => {
+        // Check if assignment has valid grade data
+        const hasNumericPoints = a.pointsEarned !== null && a.pointsEarned !== undefined && a.pointsPossible && a.pointsPossible > 0;
+        const hasPointsString = a.points && a.points.includes("/") && !a.points.startsWith("0/");
+        const isNotGraded = a.score?.toLowerCase().includes("not graded") || a.score?.toLowerCase().includes("not due");
+        return (hasNumericPoints || hasPointsString) && !isNotGraded;
+      })
       .slice()
       .reverse()
-      .slice(0, 10);
+      .slice(0, 15);
     
     return gradedAssignments.map((a, idx) => {
-      const pointsMatch = a.points?.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
       let score = 0;
-      if (pointsMatch) {
-        const earned = parseFloat(pointsMatch[1]);
-        const possible = parseFloat(pointsMatch[2]);
-        score = possible > 0 ? (earned / possible) * 100 : 0;
-      } else if (a.pointsEarned !== null && a.pointsEarned !== undefined && a.pointsPossible) {
-        score = a.pointsPossible > 0 ? (a.pointsEarned / a.pointsPossible) * 100 : 0;
+      // Prioritize numeric fields first (more reliable)
+      if (a.pointsEarned !== null && a.pointsEarned !== undefined && a.pointsPossible && a.pointsPossible > 0) {
+        score = (a.pointsEarned / a.pointsPossible) * 100;
+      } else {
+        // Fallback to parsing points string
+        const pointsMatch = a.points?.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+        if (pointsMatch) {
+          const earned = parseFloat(pointsMatch[1]);
+          const possible = parseFloat(pointsMatch[2]);
+          score = possible > 0 ? (earned / possible) * 100 : 0;
+        }
       }
       return {
         name: a.name.length > 15 ? a.name.substring(0, 15) + "..." : a.name,
