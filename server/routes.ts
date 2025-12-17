@@ -270,7 +270,7 @@ export async function registerRoutes(
     });
   });
 
-  // Attendance endpoint
+  // Attendance endpoint (fallback for refresh, normally data comes from login)
   app.post("/api/studentvue/attendance", async (req, res) => {
     try {
       const { district, username, password } = req.body;
@@ -293,54 +293,12 @@ export async function registerRoutes(
       }
 
       try {
-        const attendance = await loginResult.client.attendance();
-        const records: any[] = [];
-        let totalAbsences = 0;
-        let totalTardies = 0;
-        let totalExcused = 0;
-        let totalUnexcused = 0;
-
-        const absences = attendance?.absences || [];
-        for (const absence of absences) {
-          const reason = absence.reason || "";
-          const reasonLower = reason.toLowerCase();
-          
-          // Determine status based on reason
-          let status = "Absent";
-          if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
-            status = "Tardy";
-            totalTardies++;
-          } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
-            status = "Excused";
-            totalExcused++;
-            totalAbsences++;
-          } else {
-            totalAbsences++;
-            totalUnexcused++;
-          }
-          
-          // Handle multiple periods
-          const periods = absence.periods || [0];
-          for (const period of periods) {
-            records.push({
-              date: absence.date || "",
-              period: period,
-              course: absence.note || "",
-              status: status,
-              reason: reason,
-            });
-          }
-        }
+        const attendanceRaw = await loginResult.client.attendance();
+        const attendanceData = parseAttendanceData(attendanceRaw);
 
         return res.json({
           success: true,
-          data: {
-            totalAbsences,
-            totalTardies,
-            totalExcused,
-            totalUnexcused,
-            records,
-          },
+          data: attendanceData,
         });
       } catch (fetchErr: any) {
         console.error("Attendance fetch error:", fetchErr);
@@ -487,7 +445,7 @@ function parseGradebook(gradebook: any, studentInfo: any = null) {
   };
 }
 
-// Parse attendance data from StudentVue response
+// Parse attendance data from StudentVue response (aligned with client-side parseAttendance)
 function parseAttendanceData(attendanceRaw: any) {
   const records: any[] = [];
   let totalAbsences = 0;
@@ -500,33 +458,68 @@ function parseAttendanceData(attendanceRaw: any) {
   }
 
   try {
-    const absences = attendanceRaw?.absences || [];
-    for (const absence of absences) {
-      const reason = absence.reason || "";
-      const reasonLower = reason.toLowerCase();
+    // Handle both SOAP response format (Absences.Absence) and npm client format (absences)
+    const absences = attendanceRaw?.Absences?.Absence || attendanceRaw?.absences || [];
+    const absenceList = Array.isArray(absences) ? absences : (absences ? [absences] : []);
+
+    for (const absence of absenceList) {
+      if (!absence) continue;
+
+      // Handle both SOAP attributes (_Periods) and npm client format (periods)
+      const periods = absence._Periods || absence.periods || "";
+      const periodList = typeof periods === "string" 
+        ? periods.split(",").filter((p: string) => p.trim())
+        : (Array.isArray(periods) ? periods : [periods]);
       
+      const dateVal = absence._AbsenceDate || absence.date || "";
+      const reason = absence._Reason || absence.reason || "";
+      const note = absence._Note || absence.note || "";
+      
+      // Determine status based on reason text
       let status = "Absent";
-      if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+      const reasonLower = reason.toLowerCase();
+      const noteLower = note.toLowerCase();
+      
+      if (reasonLower.includes("tardy") || reasonLower.includes("late") ||
+          noteLower.includes("tardy") || noteLower.includes("late")) {
         status = "Tardy";
         totalTardies++;
-      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || 
+                 reasonLower.includes("doctor") || reasonLower.includes("medical") ||
+                 noteLower.includes("excused") || noteLower.includes("field trip")) {
         status = "Excused";
         totalExcused++;
         totalAbsences++;
+      } else if (reasonLower.includes("unexcused") || noteLower.includes("unexcused")) {
+        status = "Unexcused";
+        totalAbsences++;
+        totalUnexcused++;
       } else {
+        // Default: treat as generic absence (unexcused if no explicit label)
+        status = "Absent";
         totalAbsences++;
         totalUnexcused++;
       }
       
-      const periods = absence.periods || [0];
-      for (const period of periods) {
+      // Create one record per period or one if no periods
+      if (periodList.length === 0) {
         records.push({
-          date: absence.date || "",
-          period: period,
-          course: absence.note || "",
+          date: dateVal,
+          period: 0,
+          course: note,
           status: status,
           reason: reason,
         });
+      } else {
+        for (const period of periodList) {
+          records.push({
+            date: dateVal,
+            period: typeof period === "number" ? period : (parseInt(period) || 0),
+            course: note,
+            status: status,
+            reason: reason,
+          });
+        }
       }
     }
   } catch (e) {
