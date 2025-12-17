@@ -61,9 +61,17 @@ export default function DashboardPage() {
         const scoreLower = a.score?.toLowerCase() || "";
         if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
           count++;
-        } else if (a.pointsEarned === 0 && a.pointsPossible && a.pointsPossible > 0) {
-          const notesLower = a.notes?.toLowerCase() || "";
-          if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
+          return;
+        }
+        if (a.pointsEarned === 0 && a.pointsPossible && a.pointsPossible > 0) {
+          count++;
+          return;
+        }
+        const pointsMatch = a.points?.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+        if (pointsMatch) {
+          const earned = parseFloat(pointsMatch[1]);
+          const possible = parseFloat(pointsMatch[2]);
+          if (earned === 0 && possible > 0) {
             count++;
           }
         }
