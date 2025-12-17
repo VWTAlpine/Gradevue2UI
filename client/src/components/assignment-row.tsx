@@ -67,6 +67,30 @@ export function AssignmentRow({
   };
 
   const { earned, max, percentage } = parseScore();
+
+  // Check if assignment is missing
+  const isMissing = (): boolean => {
+    const scoreLower = (assignment.score || "").toLowerCase();
+    const notesLower = (assignment.notes || "").toLowerCase();
+    
+    // Check for explicit "missing" text
+    if (scoreLower.includes("missing") || notesLower.includes("missing")) {
+      return true;
+    }
+    
+    // Check if past due with zero score
+    if (assignment.dueDate) {
+      const dueDate = new Date(assignment.dueDate);
+      const now = new Date();
+      if (dueDate < now && earned !== null && earned === 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const assignmentIsMissing = isMissing();
   
   const getLetterFromPercentage = (pct: number | null) => {
     if (pct === null) return "N/A";
@@ -164,7 +188,16 @@ export function AssignmentRow({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            {earned !== null && max !== null ? (
+            {assignmentIsMissing ? (
+              <div>
+                <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`assignment-points-${index}`}>
+                  0/{max ?? 0}
+                </p>
+                <p className="text-sm font-medium text-red-600 dark:text-red-400" data-testid={`assignment-percentage-${index}`}>
+                  0% missing
+                </p>
+              </div>
+            ) : earned !== null && max !== null ? (
               <div>
                 <p className="text-lg font-bold" data-testid={`assignment-points-${index}`}>
                   {earned}/{max}

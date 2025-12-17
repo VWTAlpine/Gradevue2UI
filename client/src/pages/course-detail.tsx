@@ -139,14 +139,66 @@ export default function CourseDetailPage() {
     }));
   }, [computedCategories]);
 
+  // Helper to get earned points from any assignment format
+  const getEarnedPoints = (a: any): number | null => {
+    // Check numeric fields first
+    if (a.pointsEarned !== null && a.pointsEarned !== undefined) {
+      return a.pointsEarned;
+    }
+    
+    // Check score for "X out of Y" or "X/Y" format
+    if (a.score) {
+      const scoreMatch = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
+      if (scoreMatch) {
+        return parseFloat(scoreMatch[1]);
+      }
+      // Check for simple number or percentage
+      const simpleNumber = parseFloat(a.score);
+      if (!isNaN(simpleNumber)) {
+        return simpleNumber;
+      }
+    }
+    
+    // Check points field
+    if (a.points) {
+      const pointsMatch = a.points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+      if (pointsMatch) {
+        return parseFloat(pointsMatch[1]);
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper to check if an assignment is missing
+  const isAssignmentMissing = (a: any): boolean => {
+    const scoreLower = (a.score || "").toLowerCase();
+    const notesLower = (a.notes || "").toLowerCase();
+    
+    // Check for explicit "missing" text
+    if (scoreLower.includes("missing") || notesLower.includes("missing")) {
+      return true;
+    }
+    
+    // Check if past due with zero score
+    if (a.dueDate) {
+      const dueDate = new Date(a.dueDate);
+      const now = new Date();
+      if (dueDate < now) {
+        const earned = getEarnedPoints(a);
+        if (earned !== null && earned === 0) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
   // Detect missing assignments
   const missingAssignments = useMemo(() => {
     if (!course?.assignments) return [];
-    return course.assignments.filter(a => {
-      const scoreLower = (a.score || "").toLowerCase();
-      const notesLower = (a.notes || "").toLowerCase();
-      return scoreLower.includes("missing") || notesLower.includes("missing");
-    });
+    return course.assignments.filter(isAssignmentMissing);
   }, [course]);
 
   // Same parseScore logic as AssignmentRow - handles all data formats
