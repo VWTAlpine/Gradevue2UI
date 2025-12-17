@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useGrades } from "@/lib/gradeContext";
-import { StudentVueClient, parseAttendance, type ParsedAttendanceRecord } from "@/lib/studentvue-client";
+import { type ParsedAttendanceRecord } from "@/lib/studentvue-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,32 +52,18 @@ export default function AttendancePage() {
 
       try {
         setIsLoading(true);
-        let attendanceData = null;
-
-        try {
-          const client = new StudentVueClient(
-            credentials.district,
-            credentials.username,
-            credentials.password
-          );
-          await client.checkLogin();
-          const rawAttendance = await client.attendance();
-          attendanceData = parseAttendance(rawAttendance);
-        } catch (clientErr: any) {
-          console.log("Client-side attendance fetch failed, trying server:", clientErr.message);
-          const res = await fetch("/api/studentvue/attendance", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(credentials),
-            credentials: "include",
-          });
-          const response = await res.json();
-          if (response.success && response.data) {
-            attendanceData = response.data;
-          }
-        }
-
-        if (attendanceData) {
+        
+        // Use server-side fetch for attendance (browser SOAP doesn't work due to CORS)
+        const res = await fetch("/api/studentvue/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+          credentials: "include",
+        });
+        const response = await res.json();
+        
+        if (response.success && response.data) {
+          const attendanceData = response.data;
           setAttendanceRecords(attendanceData.records || []);
           const newStats = {
             present: 0,
