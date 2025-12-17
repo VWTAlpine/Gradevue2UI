@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useGrades } from "@/lib/gradeContext";
-import { type ParsedAttendanceRecord } from "@/lib/studentvue-client";
+import type { AttendanceRecord } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,56 +37,18 @@ function getStatusFromRecord(status: string): AttendanceStatus {
 }
 
 export default function AttendancePage() {
-  const { credentials } = useGrades();
-  const [attendanceRecords, setAttendanceRecords] = useState<ParsedAttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({ present: 0, absent: 0, tardy: 0, excused: 0 });
+  const { gradebook, isLoading } = useGrades();
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      if (!credentials) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        
-        // Use server-side fetch for attendance (browser SOAP doesn't work due to CORS)
-        const res = await fetch("/api/studentvue/attendance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-          credentials: "include",
-        });
-        const response = await res.json();
-        
-        if (response.success && response.data) {
-          const attendanceData = response.data;
-          setAttendanceRecords(attendanceData.records || []);
-          const newStats = {
-            present: 0,
-            absent: attendanceData.totalAbsences || 0,
-            tardy: attendanceData.totalTardies || 0,
-            excused: attendanceData.totalExcused || 0,
-          };
-          setStats(newStats);
-          localStorage.setItem("attendance", JSON.stringify({
-            totalAbsences: attendanceData.totalAbsences || 0,
-            totalTardies: attendanceData.totalTardies || 0,
-            totalExcused: attendanceData.totalExcused || 0,
-          }));
-        }
-      } catch (err: any) {
-        console.error("Error fetching attendance:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAttendance();
-  }, [credentials]);
+  // Get attendance data from context (loaded during login)
+  const attendanceData = gradebook?.attendance;
+  const attendanceRecords: AttendanceRecord[] = attendanceData?.records || [];
+  const stats = {
+    present: 0,
+    absent: attendanceData?.totalAbsences || 0,
+    tardy: attendanceData?.totalTardies || 0,
+    excused: attendanceData?.totalExcused || 0,
+  };
 
   const attendanceByDate = useMemo(() => {
     const map = new Map<string, AttendanceStatus>();

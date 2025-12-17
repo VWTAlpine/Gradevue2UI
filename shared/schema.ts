@@ -67,6 +67,28 @@ export const studentInfoSchema = z.object({
 
 export type StudentInfo = z.infer<typeof studentInfoSchema>;
 
+// Attendance Record Schema (individual record)
+export const attendanceRecordSchema = z.object({
+  date: z.string(),
+  period: z.number().optional(),
+  course: z.string().optional(),
+  status: z.string(),
+  reason: z.string().optional(),
+});
+
+export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
+
+// Attendance data structure (summary with records)
+export const attendanceDataSchema = z.object({
+  totalAbsences: z.number(),
+  totalTardies: z.number(),
+  totalExcused: z.number(),
+  totalUnexcused: z.number(),
+  records: z.array(attendanceRecordSchema),
+});
+
+export type AttendanceData = z.infer<typeof attendanceDataSchema>;
+
 // Gradebook Schema (main data structure from StudentVue)
 export const gradebookSchema = z.object({
   courses: z.array(courseSchema),
@@ -81,20 +103,10 @@ export const gradebookSchema = z.object({
     endDate: z.string().optional(),
   })).optional(),
   studentInfo: studentInfoSchema.optional(),
+  attendance: attendanceDataSchema.optional(),
 });
 
 export type Gradebook = z.infer<typeof gradebookSchema>;
-
-// Attendance Schema
-export const attendanceRecordSchema = z.object({
-  date: z.string(),
-  period: z.number().optional(),
-  course: z.string().optional(),
-  status: z.enum(["Present", "Absent", "Tardy", "Excused", "Unexcused"]),
-  reason: z.string().optional(),
-});
-
-export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
 
 // GPA Calculation Types
 export interface GPAEntry {

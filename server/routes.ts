@@ -204,14 +204,18 @@ export async function registerRoutes(
         const client = loginResult.client;
         console.log("Login successful, fetching gradebook...");
 
-        // Fetch gradebook and student info in parallel with timeout
-        const [gradebook, studentInfo] = await Promise.all([
+        // Fetch gradebook, student info, and attendance in parallel with timeout
+        const [gradebook, studentInfo, attendanceRaw] = await Promise.all([
           withTimeout(client.gradebook(), 20000, "Gradebook fetch").catch((e: any) => {
             console.error("Gradebook fetch error:", e.message);
             return null;
           }),
           withTimeout(client.studentInfo(), 20000, "Student info fetch").catch((e: any) => {
             console.error("Student info fetch error:", e.message);
+            return null;
+          }),
+          withTimeout(client.attendance(), 20000, "Attendance fetch").catch((e: any) => {
+            console.error("Attendance fetch error:", e.message);
             return null;
           }),
         ]);
@@ -226,7 +230,11 @@ export async function registerRoutes(
         // Parse the gradebook data into our schema format
         const parsedGradebook = parseGradebook(gradebook, studentInfo);
         
-        console.log(`Fetched ${parsedGradebook.courses?.length || 0} courses`);
+        // Parse attendance data
+        const attendance = parseAttendanceData(attendanceRaw);
+        parsedGradebook.attendance = attendance;
+        
+        console.log(`Fetched ${parsedGradebook.courses?.length || 0} courses, ${attendance.records.length} attendance records`);
         
         return res.json({ 
           success: true, 
@@ -475,7 +483,57 @@ function parseGradebook(gradebook: any, studentInfo: any = null) {
     reportingPeriod,
     reportingPeriods: gradebook.reportingPeriods || [],
     studentInfo: parsedStudentInfo,
+    attendance: null as any,
   };
+}
+
+// Parse attendance data from StudentVue response
+function parseAttendanceData(attendanceRaw: any) {
+  const records: any[] = [];
+  let totalAbsences = 0;
+  let totalTardies = 0;
+  let totalExcused = 0;
+  let totalUnexcused = 0;
+
+  if (!attendanceRaw) {
+    return { totalAbsences, totalTardies, totalExcused, totalUnexcused, records };
+  }
+
+  try {
+    const absences = attendanceRaw?.absences || [];
+    for (const absence of absences) {
+      const reason = absence.reason || "";
+      const reasonLower = reason.toLowerCase();
+      
+      let status = "Absent";
+      if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+        status = "Tardy";
+        totalTardies++;
+      } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+        status = "Excused";
+        totalExcused++;
+        totalAbsences++;
+      } else {
+        totalAbsences++;
+        totalUnexcused++;
+      }
+      
+      const periods = absence.periods || [0];
+      for (const period of periods) {
+        records.push({
+          date: absence.date || "",
+          period: period,
+          course: absence.note || "",
+          status: status,
+          reason: reason,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing attendance:", e);
+  }
+
+  return { totalAbsences, totalTardies, totalExcused, totalUnexcused, records };
 }
 
 // Generate realistic demo data
