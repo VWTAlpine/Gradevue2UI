@@ -3,7 +3,7 @@ import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AttendanceSummary {
@@ -53,6 +53,26 @@ export default function DashboardPage() {
   }, []);
 
   const courses = gradebook?.courses || [];
+
+  const countMissingAssignments = () => {
+    let count = 0;
+    courses.forEach((course) => {
+      course.assignments.forEach((a) => {
+        const scoreLower = a.score?.toLowerCase() || "";
+        if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
+          count++;
+        } else if (a.pointsEarned === 0 && a.pointsPossible && a.pointsPossible > 0) {
+          const notesLower = a.notes?.toLowerCase() || "";
+          if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
+            count++;
+          }
+        }
+      });
+    });
+    return count;
+  };
+
+  const missingCount = countMissingAssignments();
 
   const calculateOverallGPA = () => {
     const validGrades = courses.filter((c) => c.grade !== null);
@@ -176,15 +196,26 @@ export default function DashboardPage() {
           testId="stat-average-grade"
         />
         <div className="flex flex-col gap-4">
-          <StatCard
-            title="Courses"
-            value={courses.length.toString()}
-            icon={BookOpen}
-            iconBgColor="bg-purple-100 dark:bg-purple-900/30"
-            iconColor="text-purple-600 dark:text-purple-400"
-            size="compact"
-            testId="stat-total-courses"
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard
+              title="Courses"
+              value={courses.length.toString()}
+              icon={BookOpen}
+              iconBgColor="bg-purple-100 dark:bg-purple-900/30"
+              iconColor="text-purple-600 dark:text-purple-400"
+              size="mini"
+              testId="stat-total-courses"
+            />
+            <StatCard
+              title="Missing"
+              value={missingCount.toString()}
+              icon={AlertTriangle}
+              iconBgColor={missingCount > 0 ? "bg-red-100 dark:bg-red-900/30" : "bg-emerald-100 dark:bg-emerald-900/30"}
+              iconColor={missingCount > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}
+              size="mini"
+              testId="stat-missing"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <StatCard
               title="Tardies"
