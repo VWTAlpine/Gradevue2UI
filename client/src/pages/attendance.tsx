@@ -1,11 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useGrades } from "@/lib/gradeContext";
-import type { AttendanceRecord } from "@shared/schema";
+import { StudentVueClient, parseAttendance, type ParsedAttendanceRecord } from "@/lib/studentvue-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -37,18 +36,70 @@ function getStatusFromRecord(status: string): AttendanceStatus {
 }
 
 export default function AttendancePage() {
-  const { gradebook, isLoading } = useGrades();
+  const { credentials } = useGrades();
+  const [attendanceRecords, setAttendanceRecords] = useState<ParsedAttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ present: 0, absent: 0, tardy: 0, excused: 0 });
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-  // Get attendance data from context (loaded during login)
-  const attendanceData = gradebook?.attendance;
-  const attendanceRecords: AttendanceRecord[] = attendanceData?.records || [];
-  const stats = {
-    present: 0,
-    absent: attendanceData?.totalAbsences || 0,
-    tardy: attendanceData?.totalTardies || 0,
-    excused: attendanceData?.totalExcused || 0,
-  };
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      if (!credentials) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        let attendanceData = null;
+
+        try {
+          const client = new StudentVueClient(
+            credentials.district,
+            credentials.username,
+            credentials.password
+          );
+          await client.checkLogin();
+          const rawAttendance = await client.attendance();
+          attendanceData = parseAttendance(rawAttendance);
+        } catch (clientErr: any) {
+          console.log("Client-side attendance fetch failed, trying server:", clientErr.message);
+          const res = await fetch("/api/studentvue/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(credentials),
+            credentials: "include",
+          });
+          const response = await res.json();
+          if (response.success && response.data) {
+            attendanceData = response.data;
+          }
+        }
+
+        if (attendanceData) {
+          setAttendanceRecords(attendanceData.records || []);
+          const newStats = {
+            present: 0,
+            absent: attendanceData.totalAbsences || 0,
+            tardy: attendanceData.totalTardies || 0,
+            excused: attendanceData.totalExcused || 0,
+          };
+          setStats(newStats);
+          localStorage.setItem("attendance", JSON.stringify({
+            totalAbsences: attendanceData.totalAbsences || 0,
+            totalTardies: attendanceData.totalTardies || 0,
+            totalExcused: attendanceData.totalExcused || 0,
+          }));
+        }
+      } catch (err: any) {
+        console.error("Error fetching attendance:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAttendance();
+  }, [credentials]);
 
   const attendanceByDate = useMemo(() => {
     const map = new Map<string, AttendanceStatus>();
@@ -387,36 +438,24 @@ export default function AttendancePage() {
           ) : (
             <div className="space-y-3">
               {attendanceRecords.map((record, index) => (
-                <Collapsible key={index}>
-                  <div className="rounded-lg border bg-card">
-                    <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover-elevate">
-                      <div className="flex items-center gap-4">
-                        {getStatusIcon(record.status)}
-                        <div className="text-left">
-                          <p className="font-medium">{record.date}</p>
-                          {record.course && (
-                            <p className="text-sm text-muted-foreground">
-                              {record.course}
-                              {record.period ? ` - Period ${record.period}` : ""}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(record.status)}
-                        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="border-t px-4 py-3">
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border bg-card p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    {getStatusIcon(record.status)}
+                    <div>
+                      <p className="font-medium">{record.date}</p>
+                      {record.course && (
                         <p className="text-sm text-muted-foreground">
-                          <span className="font-medium text-foreground">Reason: </span>
-                          {record.reason || "No description provided"}
+                          {record.course}
+                          {record.period && ` - Period ${record.period}`}
                         </p>
-                      </div>
-                    </CollapsibleContent>
+                      )}
+                    </div>
                   </div>
-                </Collapsible>
+                  {getStatusBadge(record.status)}
+                </div>
               ))}
             </div>
           )}
