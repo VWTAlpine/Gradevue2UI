@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useGrades } from "@/lib/gradeContext";
 import { ThemeToggle } from "@/components/theme-toggle";
+import logoImage from "@assets/Gradevue_Design_Pack_(2)_1765931756566.png";
 import { GraduationCap, Lock, User, Globe, Loader2, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { StudentVueClient, parseGradebook } from "@/lib/studentvue-client";
@@ -189,10 +190,14 @@ export default function LoginPage() {
       <main className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
-              <GraduationCap className="h-10 w-10 text-primary-foreground" />
+            <div className="mx-auto mb-4">
+              <img 
+                src={logoImage} 
+                alt="GradeVue Logo" 
+                className="mx-auto h-24 w-auto object-contain"
+                data-testid="img-login-logo"
+              />
             </div>
-            <h1 className="text-4xl font-bold tracking-tight">GradeVue</h1>
             <p className="mt-2 text-muted-foreground">
               A beautiful way to view your StudentVue grades
             </p>
