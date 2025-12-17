@@ -190,11 +190,11 @@ export default function LoginPage() {
       <main className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <div className="mx-auto mb-4 h-28 overflow-hidden">
+            <div className="mx-auto mb-4">
               <img 
                 src={logoImage} 
                 alt="GradeVue Logo" 
-                className="mx-auto h-28 w-auto object-cover scale-[2.5]"
+                className="mx-auto h-40 w-auto object-contain"
                 data-testid="img-login-logo"
               />
             </div>
