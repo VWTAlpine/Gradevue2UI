@@ -144,17 +144,74 @@ export function GradeProvider({ children }: { children: ReactNode }) {
 
       let newGrade: number | null = course.grade;
 
-      let totalEarned = 0;
-      let totalPossible = 0;
-      modifiedAssignments.forEach(a => {
-        const earned = a.pointsEarned ?? 0;
-        const possible = a.pointsPossible ?? 0;
-        if (possible > 0) {
-          totalEarned += earned;
-          totalPossible += possible;
+      if (course.categories && course.categories.length > 0) {
+        const categoryTotals: Map<string, { earned: number; possible: number }> = new Map();
+        
+        course.categories.forEach(cat => {
+          categoryTotals.set(cat.name.toLowerCase(), { earned: 0, possible: 0 });
+        });
+
+        modifiedAssignments.forEach(a => {
+          const earned = a.pointsEarned ?? 0;
+          const possible = a.pointsPossible ?? 0;
+          if (possible > 0) {
+            const assignmentType = a.type?.toLowerCase() || "";
+            let matchedCategory: string | null = null;
+            
+            for (const cat of course.categories!) {
+              const catNameLower = cat.name.toLowerCase();
+              if (assignmentType.includes(catNameLower) || catNameLower.includes(assignmentType)) {
+                matchedCategory = catNameLower;
+                break;
+              }
+            }
+            
+            if (!matchedCategory) {
+              for (const cat of course.categories!) {
+                matchedCategory = cat.name.toLowerCase();
+                break;
+              }
+            }
+
+            if (matchedCategory && categoryTotals.has(matchedCategory)) {
+              const current = categoryTotals.get(matchedCategory)!;
+              categoryTotals.set(matchedCategory, {
+                earned: current.earned + earned,
+                possible: current.possible + possible,
+              });
+            }
+          }
+        });
+
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        course.categories.forEach(cat => {
+          const catNameLower = cat.name.toLowerCase();
+          const totals = categoryTotals.get(catNameLower);
+          if (totals && totals.possible > 0) {
+            const categoryPercent = (totals.earned / totals.possible) * 100;
+            weightedSum += categoryPercent * (cat.weight / 100);
+            totalWeight += cat.weight;
+          }
+        });
+
+        if (totalWeight > 0) {
+          newGrade = (weightedSum / totalWeight) * 100;
         }
-      });
-      newGrade = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : course.grade;
+      } else {
+        let totalEarned = 0;
+        let totalPossible = 0;
+        modifiedAssignments.forEach(a => {
+          const earned = a.pointsEarned ?? 0;
+          const possible = a.pointsPossible ?? 0;
+          if (possible > 0) {
+            totalEarned += earned;
+            totalPossible += possible;
+          }
+        });
+        newGrade = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : course.grade;
+      }
 
       const newLetterGrade = getLetterGrade(newGrade);
 
