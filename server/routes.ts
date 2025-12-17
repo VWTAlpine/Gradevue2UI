@@ -230,9 +230,19 @@ export async function registerRoutes(
         // Parse the gradebook data into our schema format
         const parsedGradebook = parseGradebook(gradebook, studentInfo);
         
+        // DEBUG: Log raw attendance data to understand structure
+        console.log("=== RAW ATTENDANCE DATA ===");
+        console.log(JSON.stringify(attendanceRaw, null, 2));
+        console.log("=== END RAW ATTENDANCE DATA ===");
+        
         // Parse attendance data
         const attendance = parseAttendanceData(attendanceRaw);
         parsedGradebook.attendance = attendance;
+        
+        // DEBUG: Log parsed attendance data
+        console.log("=== PARSED ATTENDANCE DATA ===");
+        console.log(JSON.stringify(attendance, null, 2));
+        console.log("=== END PARSED ATTENDANCE DATA ===");
         
         console.log(`Fetched ${parsedGradebook.courses?.length || 0} courses, ${attendance.records.length} attendance records`);
         
