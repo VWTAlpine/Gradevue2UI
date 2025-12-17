@@ -96,11 +96,11 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 space-y-3">
-        <div className="flex justify-center pb-2">
+        <div className="flex justify-center pb-2 h-16 overflow-hidden">
           <img 
             src={logoImage} 
             alt="GradeVue Logo" 
-            className="h-20 w-auto object-cover scale-[2.5]"
+            className="h-16 w-auto object-cover scale-[2.5]"
             data-testid="img-sidebar-logo"
           />
         </div>
