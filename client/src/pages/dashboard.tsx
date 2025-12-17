@@ -55,17 +55,37 @@ export default function DashboardPage() {
   const courses = gradebook?.courses || [];
 
   const countMissingAssignments = () => {
+    const now = new Date();
     let count = 0;
     courses.forEach((course) => {
       course.assignments.forEach((a) => {
         const scoreLower = a.score?.toLowerCase() || "";
         const notesLower = a.notes?.toLowerCase() || "";
+        
+        // Explicit "missing" in score or notes
         if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
           count++;
           return;
         }
         if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
           count++;
+          return;
+        }
+        
+        // "Not Graded" with a past due date is considered missing
+        if (scoreLower === "not graded" || scoreLower === "n/a" || scoreLower === "") {
+          if (a.dueDate) {
+            const dueDate = new Date(a.dueDate);
+            if (!isNaN(dueDate.getTime()) && dueDate < now) {
+              const hasNoScore = a.pointsEarned === 0 || 
+                                 a.pointsEarned === undefined || 
+                                 a.pointsEarned === null ||
+                                 (a.points && a.points.match(/^0\s*\/\s*[\d.]+/));
+              if (hasNoScore) {
+                count++;
+              }
+            }
+          }
         }
       });
     });

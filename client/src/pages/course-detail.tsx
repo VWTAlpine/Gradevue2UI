@@ -153,15 +153,19 @@ export default function CourseDetailPage() {
         return true;
       }
       
-      // "Not Graded" with a past due date is likely missing
+      // "Not Graded" with a past due date is considered missing
       if (scoreLower === "not graded" || scoreLower === "n/a" || scoreLower === "") {
         if (a.dueDate) {
           const dueDate = new Date(a.dueDate);
           // Check if due date is valid and in the past
           if (!isNaN(dueDate.getTime()) && dueDate < now) {
-            // Also check if there are 0 points earned (confirms it's missing, not just ungraded)
-            if (a.pointsEarned === 0 || 
-                (a.points && a.points.match(/^0\s*\/\s*[\d.]+/))) {
+            // Any ungraded assignment past its due date is likely missing
+            // Check if there's no actual score (pointsEarned is 0, undefined, or null)
+            const hasNoScore = a.pointsEarned === 0 || 
+                               a.pointsEarned === undefined || 
+                               a.pointsEarned === null ||
+                               (a.points && a.points.match(/^0\s*\/\s*[\d.]+/));
+            if (hasNoScore) {
               return true;
             }
           }
