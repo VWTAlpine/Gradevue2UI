@@ -194,7 +194,7 @@ export default function LoginPage() {
               <img 
                 src={logoImage} 
                 alt="GradeVue Logo" 
-                className="mx-auto h-40 w-auto object-contain"
+                className="mx-auto h-56 w-auto object-contain"
                 data-testid="img-login-logo"
               />
             </div>
