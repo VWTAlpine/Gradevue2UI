@@ -203,7 +203,10 @@ export default function LoginPage() {
               />
             </div>
             <p className="mt-2 text-muted-foreground">
-              A full-fledged replacement for StudentVue
+              A beautiful, full-fledged replacement for StudentVue
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground/70">
+              By students, for students
             </p>
           </div>
 
