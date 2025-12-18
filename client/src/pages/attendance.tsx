@@ -4,7 +4,8 @@ import { StudentVueClient, parseAttendance, type ParsedAttendanceRecord } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, XCircle, Clock, AlertCircle, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -116,6 +117,55 @@ export default function AttendancePage() {
     });
     return map;
   }, [attendanceRecords]);
+
+  const groupedByDate = useMemo(() => {
+    const groups = new Map<string, { formattedDate: string; sortKey: string; records: ParsedAttendanceRecord[] }>();
+    
+    attendanceRecords.forEach((record) => {
+      const date = parseRecordDate(record.date);
+      if (date) {
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const formattedDate = `${weekdays[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+        
+        if (!groups.has(key)) {
+          groups.set(key, { formattedDate, sortKey: key, records: [] });
+        }
+        groups.get(key)!.records.push(record);
+      }
+    });
+    
+    return Array.from(groups.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  }, [attendanceRecords]);
+
+  const getOverallStatus = (records: ParsedAttendanceRecord[]) => {
+    let hasTardy = false;
+    let hasAbsent = false;
+    let hasExcused = false;
+    
+    records.forEach((r) => {
+      const s = r.status.toLowerCase();
+      if (s.includes("tardy") || s.includes("late")) hasTardy = true;
+      else if (s.includes("excused")) hasExcused = true;
+      else if (s.includes("absent") || s.includes("unexcused")) hasAbsent = true;
+    });
+    
+    if (hasTardy) return "tardy";
+    if (hasExcused) return "excused";
+    if (hasAbsent) return "absent";
+    return "unknown";
+  };
+
+  const [openDates, setOpenDates] = useState<Set<string>>(new Set());
+
+  const toggleDate = (dateKey: string) => {
+    setOpenDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
+  };
 
   const monthlyData = useMemo(() => {
     const data: { month: string; absent: number; tardy: number; excused: number; absentPct: number; tardyPct: number; excusedPct: number; total: number }[] = [];
@@ -423,9 +473,9 @@ export default function AttendancePage() {
         <CardHeader>
           <CardTitle>Attendance Records</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {attendanceRecords.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex flex-col items-center justify-center py-12 px-6">
               <CalendarIcon className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">No attendance records</h3>
               <p className="mt-2 text-center text-sm text-muted-foreground">
@@ -436,27 +486,69 @@ export default function AttendancePage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {attendanceRecords.map((record, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border bg-card p-4"
-                >
-                  <div className="flex items-center gap-4">
-                    {getStatusIcon(record.status)}
-                    <div>
-                      <p className="font-medium">{record.date}</p>
-                      {record.course && (
-                        <p className="text-sm text-muted-foreground">
-                          {record.course}
-                          {record.period && ` - Period ${record.period}`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {getStatusBadge(record.status)}
-                </div>
-              ))}
+            <div className="divide-y divide-border">
+              {groupedByDate.map((group, index) => {
+                const isOpen = openDates.has(group.sortKey);
+                const overallStatus = getOverallStatus(group.records);
+                
+                const getStatusBadgeStyle = (status: string) => {
+                  switch (status) {
+                    case "tardy":
+                      return "bg-amber-600 text-white dark:bg-amber-700";
+                    case "excused":
+                      return "bg-blue-600 text-white dark:bg-blue-700";
+                    case "absent":
+                      return "bg-red-600 text-white dark:bg-red-700";
+                    default:
+                      return "bg-red-800 text-white dark:bg-red-900";
+                  }
+                };
+                
+                const getStatusLabel = (status: string) => {
+                  switch (status) {
+                    case "tardy": return "Tardy";
+                    case "excused": return "Excused";
+                    case "absent": return "Absent";
+                    default: return "Unknown";
+                  }
+                };
+                
+                return (
+                  <Collapsible
+                    key={group.sortKey}
+                    open={isOpen}
+                    onOpenChange={() => toggleDate(group.sortKey)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <div
+                        className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 hover-elevate"
+                        data-testid={`attendance-row-${index}`}
+                      >
+                        <p className="font-medium">{group.formattedDate}</p>
+                        <div className="flex items-center gap-3">
+                          <Badge className={getStatusBadgeStyle(overallStatus)}>
+                            {getStatusLabel(overallStatus)}
+                          </Badge>
+                          {isOpen ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="border-t border-border bg-muted/30 px-6 py-4 space-y-2">
+                        {group.records.map((record, rIndex) => (
+                          <p key={rIndex} className="text-sm text-foreground">
+                            {record.course || "Unknown Course"}: {record.status}
+                          </p>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
         </CardContent>
