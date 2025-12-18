@@ -145,14 +145,31 @@ export default function AttendancePage() {
     
     records.forEach((r) => {
       const s = r.status.toLowerCase();
-      if (s.includes("tardy") || s.includes("late")) hasTardy = true;
-      else if (s.includes("excused")) hasExcused = true;
-      else if (s.includes("absent") || s.includes("unexcused")) hasAbsent = true;
+      // Check for tardy codes: T, Tdy, Tardy, ClsTdy, ClsTdyAbE, etc.
+      if (s.includes("tdy") || s.includes("tardy") || s === "t" || 
+          s.includes("late") || s.includes("clstdy")) {
+        hasTardy = true;
+      }
+      // Check for excused codes
+      else if (s.includes("exc") || s === "e" || s.includes("illness") ||
+               s.includes("field") || s.includes("medical")) {
+        hasExcused = true;
+      }
+      // Everything else is absence
+      else if (s.includes("abs") || s.includes("unx") || s === "a" || s === "u") {
+        hasAbsent = true;
+      }
+      else {
+        // Unknown status - could be absent
+        hasAbsent = true;
+      }
     });
     
+    // Priority: show tardy if any tardy, then absent, then excused
+    if (hasTardy && hasAbsent) return "mixed";
     if (hasTardy) return "tardy";
-    if (hasExcused) return "excused";
     if (hasAbsent) return "absent";
+    if (hasExcused) return "excused";
     return "unknown";
   };
 
@@ -499,6 +516,8 @@ export default function AttendancePage() {
                       return "bg-blue-600 text-white dark:bg-blue-700";
                     case "absent":
                       return "bg-red-600 text-white dark:bg-red-700";
+                    case "mixed":
+                      return "bg-purple-600 text-white dark:bg-purple-700";
                     default:
                       return "bg-red-800 text-white dark:bg-red-900";
                   }
@@ -509,6 +528,7 @@ export default function AttendancePage() {
                     case "tardy": return "Tardy";
                     case "excused": return "Excused";
                     case "absent": return "Absent";
+                    case "mixed": return "Mixed";
                     default: return "Unknown";
                   }
                 };
