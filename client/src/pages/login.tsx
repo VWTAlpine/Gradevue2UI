@@ -203,7 +203,7 @@ export default function LoginPage() {
               />
             </div>
             <p className="mt-2 text-muted-foreground">
-              A beautiful way to view your StudentVue grades
+              A full-fledged replacement for StudentVue
             </p>
           </div>
 
