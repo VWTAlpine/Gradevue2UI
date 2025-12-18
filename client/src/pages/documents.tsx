@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderOpen, FileText, Loader2, RefreshCw, Clock } from "lucide-react";
+import { FolderOpen, FileText, Loader2, RefreshCw, Clock, Download, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DocumentsPage() {
   const { credentials } = useGrades();
@@ -13,6 +14,8 @@ export default function DocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchDocuments = async () => {
     if (!credentials) {
@@ -61,6 +64,81 @@ export default function DocumentsPage() {
   useEffect(() => {
     fetchDocuments();
   }, [credentials]);
+
+  const downloadDocument = async (doc: ParsedDocument) => {
+    if (!credentials || !doc.documentGU) {
+      toast({
+        title: "Cannot Download",
+        description: "Document is not available for download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingDoc(doc.documentGU);
+
+    try {
+      let docContent = null;
+
+      // Try client-side first
+      try {
+        const client = new StudentVueClient(
+          credentials.district,
+          credentials.username,
+          credentials.password
+        );
+        await client.checkLogin();
+        docContent = await client.getDocumentContent(doc.documentGU);
+      } catch (clientErr: any) {
+        console.log("Client-side document download failed, trying server:", clientErr.message);
+        const res = await fetch(`/api/studentvue/document/${doc.documentGU}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+          credentials: "include",
+        });
+        const response = await res.json();
+        if (response.success && response.data) {
+          docContent = {
+            base64Code: response.data.base64,
+            fileName: response.data.fileName,
+            docType: response.data.docType,
+          };
+        }
+      }
+
+      if (docContent && docContent.base64Code) {
+        // Create a blob URL and open in new tab
+        const byteCharacters = atob(docContent.base64Code);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        
+        // Open in new tab
+        window.open(url, "_blank");
+        
+        toast({
+          title: "Document Opened",
+          description: `${doc.name} opened in new tab`,
+        });
+      } else {
+        throw new Error("No document content available");
+      }
+    } catch (err: any) {
+      console.error("Error downloading document:", err);
+      toast({
+        title: "Download Failed",
+        description: "Could not download the document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
 
   const documentTypes = useMemo(() => {
     const types = new Set<string>();
@@ -191,20 +269,39 @@ export default function DocumentsPage() {
                   {filteredDocuments.map((doc, index) => (
                     <div
                       key={index}
-                      className="flex flex-wrap items-center gap-3 px-6 py-4"
+                      className="flex items-center justify-between gap-4 px-6 py-4 hover-elevate cursor-pointer"
+                      onClick={() => downloadDocument(doc)}
                       data-testid={`document-row-${index}`}
                     >
-                      <span className="font-medium">{doc.name}</span>
-                      {doc.date && (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          {formatDate(doc.date)}
-                        </Badge>
-                      )}
-                      {doc.type && (
-                        <Badge className={getTypeColor(doc.type)}>
-                          {doc.type}
-                        </Badge>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-medium">{doc.name}</span>
+                        {doc.date && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            {formatDate(doc.date)}
+                          </Badge>
+                        )}
+                        {doc.type && (
+                          <Badge className={getTypeColor(doc.type)}>
+                            {doc.type}
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={downloadingDoc === doc.documentGU}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadDocument(doc);
+                        }}
+                        data-testid={`button-download-${index}`}
+                      >
+                        {downloadingDoc === doc.documentGU ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>

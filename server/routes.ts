@@ -382,13 +382,13 @@ export async function registerRoutes(
         const documentsData = await loginResult.client.documents();
         const documents: any[] = [];
 
-        const docList = documentsData?.documents || [];
+        const docList = documentsData || [];
         for (const doc of docList) {
           documents.push({
-            name: doc.name || "Unknown Document",
-            date: doc.date || "",
-            type: doc.type || "Document",
-            documentGU: doc.documentGU || "",
+            name: doc.document?.name || doc.name || "Unknown Document",
+            date: doc.document?.date || doc.date || "",
+            type: doc.document?.type || doc.type || "Document",
+            documentGU: doc.document?.documentGU || doc.documentGU || "",
           });
         }
 
@@ -409,6 +409,64 @@ export async function registerRoutes(
       }
     } catch (err: any) {
       console.error("Documents endpoint error:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message 
+      });
+    }
+  });
+
+  // Document download endpoint - returns base64 PDF
+  app.post("/api/studentvue/document/:documentGU", async (req, res) => {
+    try {
+      const { district, username, password } = req.body;
+      const { documentGU } = req.params;
+
+      if (!district || !username || !password || !documentGU) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required parameters" 
+        });
+      }
+
+      const districtUrl = normalizeDistrictUrl(district);
+      const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+      
+      if (!loginResult.client) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Authentication failed" 
+        });
+      }
+
+      try {
+        const docContent = await loginResult.client.getDocumentContent(documentGU);
+        
+        if (docContent && docContent.base64Code) {
+          // Return as data URL for direct viewing/download
+          return res.json({
+            success: true,
+            data: {
+              base64: docContent.base64Code,
+              fileName: docContent.fileName || "document.pdf",
+              docType: docContent.docType || "PDF",
+            },
+          });
+        }
+        
+        return res.status(404).json({
+          success: false,
+          error: "Document not found",
+        });
+      } catch (fetchErr: any) {
+        console.error("Document download error:", fetchErr);
+        return res.status(500).json({
+          success: false,
+          error: "Failed to download document",
+        });
+      }
+    } catch (err: any) {
+      console.error("Document download endpoint error:", err);
       return res.status(500).json({ 
         success: false, 
         error: err.message 

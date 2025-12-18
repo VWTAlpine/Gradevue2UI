@@ -148,7 +148,26 @@ export class StudentVueClient {
   }
 
   async getDocument(documentGU: string): Promise<any> {
-    return (await this.request('GetContentOfAttachedDoc', { DocumentGU: documentGU }));
+    const result = await this.request('GetContentOfAttachedDoc', { DocumentGU: documentGU });
+    return result;
+  }
+
+  async getDocumentContent(documentGU: string): Promise<{ base64Code: string; fileName: string; docType: string } | null> {
+    try {
+      const result = await this.getDocument(documentGU);
+      const docData = result?.AttachmentXML?.DocumentData || result?.DocumentData;
+      if (docData) {
+        return {
+          base64Code: docData._Base64Code || docData.Base64Code || "",
+          fileName: docData._FileName || docData.FileName || "document.pdf",
+          docType: docData._DocType || docData.DocType || "PDF",
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error("Error fetching document content:", e);
+      return null;
+    }
   }
 }
 
