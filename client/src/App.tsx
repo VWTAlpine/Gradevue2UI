@@ -17,6 +17,7 @@ import CourseDetailPage from "@/pages/course-detail";
 import GPACalculatorPage from "@/pages/gpa-calculator";
 import AttendancePage from "@/pages/attendance";
 import DocumentsPage from "@/pages/documents";
+import MessagesPage from "@/pages/messages";
 import TermComparisonPage from "@/pages/term-comparison";
 import SettingsPage from "@/pages/settings";
 import ProfilePage from "@/pages/profile";
@@ -89,6 +90,9 @@ function Router() {
       </Route>
       <Route path="/documents">
         <ProtectedRoute component={DocumentsPage} />
+      </Route>
+      <Route path="/messages">
+        <ProtectedRoute component={MessagesPage} />
       </Route>
       <Route path="/terms">
         <ProtectedRoute component={TermComparisonPage} />

@@ -143,6 +143,10 @@ export class StudentVueClient {
     return (await this.request('Attendance')).Attendance;
   }
 
+  async messages(): Promise<any> {
+    return (await this.request('GetPXPMessages')).PXPMessagesData;
+  }
+
   async studentDocuments(): Promise<any> {
     return (await this.request('GetStudentDocumentInitialData')).StudentDocuments;
   }
@@ -181,6 +185,51 @@ export interface ParsedDocument {
 
 export interface ParsedDocuments {
   documents: ParsedDocument[];
+}
+
+export interface ParsedMessage {
+  id: string;
+  type: string;
+  subject: string;
+  from: string;
+  date: string;
+  content: string;
+  read: boolean;
+}
+
+export interface ParsedMessages {
+  messages: ParsedMessage[];
+}
+
+export function parseMessages(data: any): ParsedMessages {
+  const messages: ParsedMessage[] = [];
+  
+  try {
+    const messageList = 
+      data?.MessageListings?.MessageListing ||
+      data?.Messages?.Message ||
+      data?.messages ||
+      [];
+    const msgArray = Array.isArray(messageList) ? messageList : (messageList ? [messageList] : []);
+    
+    for (const msg of msgArray) {
+      if (!msg) continue;
+      
+      messages.push({
+        id: msg._ID || msg.ID || msg._IconURL || msg.id || "",
+        type: msg._Type || msg.Type || msg.type || "Message",
+        subject: msg._Subject || msg.Subject || msg.subject || "No Subject",
+        from: msg._From || msg.From || msg.from || "Unknown",
+        date: msg._BeginDate || msg.BeginDate || msg._Date || msg.date || "",
+        content: msg._Content || msg.Content || msg.content || msg._Message || msg.message || "",
+        read: (msg._Read || msg.Read || msg.read) === "true" || (msg._Read || msg.Read || msg.read) === true,
+      });
+    }
+  } catch (e) {
+    console.error("Error parsing messages:", e);
+  }
+  
+  return { messages };
 }
 
 export function parseDocuments(data: any): ParsedDocuments {
@@ -264,20 +313,23 @@ function parseAttendanceCode(code: string): "Tardy" | "Absent" | "Excused" | "Un
   const codeLower = code.toLowerCase();
   
   // Common StudentVue attendance codes
-  // T, Tdy, Tardy, ClsTdy, ClsTdyAbE = Tardy
+  // T, Tdy, Tardy, ClsTdy, ClsTdyAbE, Late Bus = Tardy
   // A, Abs, Absent = Absent (unexcused)
-  // E, Exc, Excused = Excused absence
+  // E, Exc, Excused, Illness, Other Ex = Excused absence
   // U, Unx, Unexcused = Unexcused absence
   
+  // Check for tardy first (including "Late Bus", "icon_tardy")
   if (codeLower.includes("tdy") || codeLower.includes("tardy") || 
       codeLower === "t" || codeLower.includes("late") ||
-      codeLower.includes("clstdy")) {
+      codeLower.includes("clstdy") || codeLower.includes("icon_tardy")) {
     return "Tardy";
   }
   
+  // Check for excused (including "Illness", "Other Ex", "icon_excused")
   if (codeLower.includes("exc") || codeLower === "e" ||
       codeLower.includes("field") || codeLower.includes("medical") ||
-      codeLower.includes("doctor") || codeLower.includes("illness")) {
+      codeLower.includes("doctor") || codeLower.includes("illness") ||
+      codeLower.includes("other ex") || codeLower.includes("icon_excused")) {
     return "Excused";
   }
   
@@ -298,44 +350,35 @@ export function parseAttendance(attendance: any): ParsedAttendance {
   let totalUnexcused = 0;
 
   try {
-    // Log raw attendance data for debugging
-    console.log("Raw attendance data:", JSON.stringify(attendance, null, 2));
-    
     // Try SOAP response format first (from client-side)
     const absences = attendance?.Absences?.Absence || attendance?.absences || [];
     const absenceList = Array.isArray(absences) ? absences : (absences ? [absences] : []);
 
     for (const absence of absenceList) {
       if (!absence) continue;
-      
-      // Log individual absence record
-      console.log("Absence record:", JSON.stringify(absence, null, 2));
 
       const dateVal = absence._AbsenceDate || absence.date || "";
       const reason = absence._Reason || absence.reason || "";
       const note = absence._Note || absence.note || "";
       
-      // Description/Reason text
-      const description = absence._ReasonDescription || absence.reasonDescription || 
-                          absence._Description || absence.description || 
-                          reason || "";
+      // New format: Periods.Period array contains per-class details
+      const periodsData = absence.Periods?.Period || absence.periods || [];
+      const periodsList = Array.isArray(periodsData) ? periodsData : (periodsData ? [periodsData] : []);
       
-      // Get period activities - this contains per-period attendance codes
-      const periodActivities = absence._PeriodActivities || absence.periodActivities || [];
-      const dailyIconType = absence._DailyIconType || absence.dailyIconType || "";
-      
-      // Parse period activities if available (more detailed)
-      if (periodActivities && (Array.isArray(periodActivities) ? periodActivities.length > 0 : periodActivities)) {
-        const activityList = Array.isArray(periodActivities) ? periodActivities : [periodActivities];
-        
-        for (const activity of activityList) {
-          if (!activity) continue;
+      if (periodsList.length > 0) {
+        for (const period of periodsList) {
+          if (!period) continue;
           
-          const periodNum = activity._Period || activity.period || 0;
-          const courseName = activity._Name || activity.name || note || "";
-          const activityCode = activity._Code || activity.code || activity._Activity || activity.activity || reason || "";
+          const periodNum = period._Number || period.number || 0;
+          const courseName = period._Course || period.course || note || "";
+          // _Name contains the attendance code (e.g., "Illness", "ClsTdyAbE", "Late Bus", "Other Ex")
+          const attendanceCode = period._Name || period.name || reason || "";
+          const iconName = period._IconName || period.iconName || "";
           
-          const status = parseAttendanceCode(activityCode);
+          // Skip if no attendance code (means present)
+          if (!attendanceCode && !iconName) continue;
+          
+          const status = parseAttendanceCode(attendanceCode || iconName);
           
           if (status === "Tardy") {
             totalTardies++;
@@ -351,20 +394,14 @@ export function parseAttendance(attendance: any): ParsedAttendance {
             date: dateVal,
             period: typeof periodNum === "number" ? periodNum : (parseInt(periodNum) || 0),
             course: courseName,
-            status: activityCode || status,
+            status: attendanceCode || status,
             reason: reason,
-            description: description,
+            description: attendanceCode || reason,
           });
         }
       } else {
-        // Fallback: Use periods list and reason
-        const periods = absence._Periods || absence.periods || "";
-        const periodList = typeof periods === "string" 
-          ? periods.split(",").filter((p: string) => p.trim())
-          : (Array.isArray(periods) ? periods : (periods ? [periods] : []));
-        
-        // Check dailyIconType or reason for status
-        const statusCode = dailyIconType || reason;
+        // Fallback for old format
+        const statusCode = reason;
         const status = parseAttendanceCode(statusCode);
         
         if (status === "Tardy") {
@@ -377,27 +414,14 @@ export function parseAttendance(attendance: any): ParsedAttendance {
           totalUnexcused++;
         }
         
-        if (periodList.length === 0) {
-          records.push({
-            date: dateVal,
-            period: 0,
-            course: note,
-            status: statusCode || status,
-            reason: reason,
-            description: description,
-          });
-        } else {
-          for (const period of periodList) {
-            records.push({
-              date: dateVal,
-              period: typeof period === "number" ? period : (parseInt(period) || 0),
-              course: note,
-              status: statusCode || status,
-              reason: reason,
-              description: description,
-            });
-          }
-        }
+        records.push({
+          date: dateVal,
+          period: 0,
+          course: note,
+          status: statusCode || status,
+          reason: reason,
+          description: reason,
+        });
       }
     }
   } catch (e) {

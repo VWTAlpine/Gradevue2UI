@@ -438,6 +438,71 @@ export async function registerRoutes(
     }
   });
 
+  // Messages endpoint
+  app.post("/api/studentvue/messages", async (req, res) => {
+    try {
+      const { district, username, password } = req.body;
+
+      if (!district || !username || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required credentials" 
+        });
+      }
+
+      const districtUrl = normalizeDistrictUrl(district);
+      const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+      
+      if (!loginResult.client) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Authentication failed" 
+        });
+      }
+
+      try {
+        const messagesData = await loginResult.client.messages();
+        const messages: any[] = [];
+
+        const msgList = messagesData || [];
+        for (const msg of msgList) {
+          const msgObj = msg.message || msg;
+          
+          messages.push({
+            id: msgObj.id || msgObj.iconURL || "",
+            type: msgObj.type || "Message",
+            subject: msgObj.subject || "No Subject",
+            from: msgObj.from || "Unknown",
+            date: msgObj.beginDate || msgObj.date || "",
+            content: msgObj.htmlContent || msgObj.content || "",
+            read: msgObj.read === true || msgObj.read === "true",
+          });
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            messages,
+          },
+        });
+      } catch (fetchErr: any) {
+        console.error("Messages fetch error:", fetchErr);
+        return res.json({
+          success: true,
+          data: {
+            messages: [],
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error("Messages endpoint error:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message 
+      });
+    }
+  });
+
   // Document download endpoint - returns base64 PDF
   app.post("/api/studentvue/document/:documentGU", async (req, res) => {
     try {
