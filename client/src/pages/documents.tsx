@@ -295,11 +295,11 @@ export default function DocumentsPage() {
         <Card className="overflow-visible">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <div className="border-b px-6 pt-4">
+              <div className="px-6 pt-4 pb-2">
                 <TabsList className="h-auto flex-wrap gap-2 bg-transparent p-0">
                   <TabsTrigger
                     value="all"
-                    className="data-[state=active]:bg-muted rounded-none border-b-2 border-transparent px-3 pb-3 data-[state=active]:border-primary"
+                    className="rounded-full px-4 py-2 data-[state=active]:bg-muted data-[state=active]:shadow-sm"
                     data-testid="tab-all-documents"
                   >
                     All
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                     <TabsTrigger
                       key={type}
                       value={type}
-                      className="data-[state=active]:bg-muted rounded-none border-b-2 border-transparent px-3 pb-3 data-[state=active]:border-primary"
+                      className="rounded-full px-4 py-2 data-[state=active]:bg-muted data-[state=active]:shadow-sm"
                       data-testid={`tab-${type.replace(/\s+/g, "-").toLowerCase()}`}
                     >
                       {type}

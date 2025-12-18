@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Clock, RefreshCw } from "lucide-react";
 import { useGrades } from "@/lib/gradeContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 function formatTimeAgo(date: Date): string {
   const now = new Date();
@@ -28,8 +29,13 @@ function formatTimeAgo(date: Date): string {
 }
 
 export function RefreshIndicator() {
-  const { lastUpdated, refreshGrades, isLoading, credentials } = useGrades();
+  const { lastUpdated, refreshGrades, isLoading, credentials, gradebook } = useGrades();
   const [timeAgo, setTimeAgo] = useState<string>("");
+
+  const studentInfo = gradebook?.studentInfo;
+  const initials = studentInfo?.name
+    ? studentInfo.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : "ST";
 
   useEffect(() => {
     if (!lastUpdated) return;
@@ -50,10 +56,14 @@ export function RefreshIndicator() {
 
   return (
     <div 
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-muted/90 backdrop-blur-sm border px-4 py-2 shadow-lg"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-muted/90 backdrop-blur-sm border pl-1.5 pr-4 py-1.5 shadow-lg"
       data-testid="refresh-indicator"
     >
-      <Clock className="h-4 w-4 text-muted-foreground" />
+      <Avatar className="h-7 w-7">
+        <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
       <span className="text-sm text-muted-foreground">
         Last updated {timeAgo}
       </span>
