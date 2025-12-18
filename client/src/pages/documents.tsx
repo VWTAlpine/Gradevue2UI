@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useGrades } from "@/lib/gradeContext";
 import { StudentVueClient, parseDocuments, type ParsedDocument } from "@/lib/studentvue-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,13 +8,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FolderOpen, FileText, Loader2, RefreshCw, Clock, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface DocumentWithUrl extends ParsedDocument {
+  blobUrl?: string;
+}
+
 export default function DocumentsPage() {
   const { credentials } = useGrades();
-  const [documents, setDocuments] = useState<ParsedDocument[]>([]);
+  const [documents, setDocuments] = useState<DocumentWithUrl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [loadingUrls, setLoadingUrls] = useState<Set<string>>(new Set());
+  const blobUrlCache = useRef<Map<string, string>>(new Map());
   const { toast } = useToast();
 
   const fetchDocuments = async () => {
@@ -65,80 +71,105 @@ export default function DocumentsPage() {
     fetchDocuments();
   }, [credentials]);
 
-  const downloadDocument = async (doc: ParsedDocument) => {
-    if (!credentials || !doc.documentGU) {
-      toast({
-        title: "Cannot Download",
-        description: "Document is not available for download",
-        variant: "destructive",
-      });
-      return;
+  const fetchDocumentBlobUrl = async (documentGU: string): Promise<string | null> => {
+    if (!credentials || !documentGU) return null;
+    
+    // Check cache first
+    if (blobUrlCache.current.has(documentGU)) {
+      return blobUrlCache.current.get(documentGU)!;
     }
 
-    setDownloadingDoc(doc.documentGU);
-
     try {
-      let docContent = null;
-
-      // Try client-side first
-      try {
-        const client = new StudentVueClient(
-          credentials.district,
-          credentials.username,
-          credentials.password
-        );
-        await client.checkLogin();
-        docContent = await client.getDocumentContent(doc.documentGU);
-      } catch (clientErr: any) {
-        console.log("Client-side document download failed, trying server:", clientErr.message);
-        const res = await fetch(`/api/studentvue/document/${doc.documentGU}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(credentials),
-          credentials: "include",
-        });
-        const response = await res.json();
-        if (response.success && response.data) {
-          docContent = {
-            base64Code: response.data.base64,
-            fileName: response.data.fileName,
-            docType: response.data.docType,
-          };
-        }
-      }
-
-      if (docContent && docContent.base64Code) {
-        // Create a blob URL and open in new tab
-        const byteCharacters = atob(docContent.base64Code);
+      // Use server-side endpoint for document content (more reliable than client-side CORS)
+      const res = await fetch(`/api/studentvue/document/${encodeURIComponent(documentGU)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+        credentials: "include",
+      });
+      const response = await res.json();
+      
+      if (response.success && response.data && response.data.base64) {
+        // Convert base64 to blob URL
+        const byteCharacters = atob(response.data.base64);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Cache the URL
+        blobUrlCache.current.set(documentGU, blobUrl);
+        return blobUrl;
+      }
+    } catch (err) {
+      console.error("Error fetching document blob:", err);
+    }
+    
+    return null;
+  };
+
+  const openDocument = async (doc: DocumentWithUrl) => {
+    if (!credentials || !doc.documentGU) {
+      toast({
+        title: "Cannot Open",
+        description: "Document is not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If we already have the blob URL, open it directly
+    if (doc.blobUrl) {
+      window.open(doc.blobUrl, "_blank");
+      return;
+    }
+
+    setDownloadingDoc(doc.documentGU);
+    setLoadingUrls(prev => new Set(prev).add(doc.documentGU));
+
+    try {
+      const blobUrl = await fetchDocumentBlobUrl(doc.documentGU);
+      
+      if (blobUrl) {
+        // Update document with blob URL
+        setDocuments(prev => 
+          prev.map(d => 
+            d.documentGU === doc.documentGU ? { ...d, blobUrl } : d
+          )
+        );
         
         // Open in new tab
-        window.open(url, "_blank");
-        
-        toast({
-          title: "Document Opened",
-          description: `${doc.name} opened in new tab`,
-        });
+        window.open(blobUrl, "_blank");
       } else {
-        throw new Error("No document content available");
+        throw new Error("Could not load document");
       }
     } catch (err: any) {
-      console.error("Error downloading document:", err);
+      console.error("Error opening document:", err);
       toast({
-        title: "Download Failed",
-        description: "Could not download the document. Please try again.",
+        title: "Failed to Open",
+        description: "Could not open the document. Please try again.",
         variant: "destructive",
       });
     } finally {
       setDownloadingDoc(null);
+      setLoadingUrls(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.documentGU);
+        return newSet;
+      });
     }
   };
+
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      blobUrlCache.current.forEach(url => URL.revokeObjectURL(url));
+      blobUrlCache.current.clear();
+    };
+  }, []);
 
   const documentTypes = useMemo(() => {
     const types = new Set<string>();
@@ -270,10 +301,11 @@ export default function DocumentsPage() {
                     <div
                       key={index}
                       className="flex items-center justify-between gap-4 px-6 py-4 hover-elevate cursor-pointer"
-                      onClick={() => downloadDocument(doc)}
+                      onClick={() => openDocument(doc)}
                       data-testid={`document-row-${index}`}
                     >
                       <div className="flex flex-wrap items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
                         <span className="font-medium">{doc.name}</span>
                         {doc.date && (
                           <Badge variant="outline" className="text-muted-foreground">
@@ -285,18 +317,23 @@ export default function DocumentsPage() {
                             {doc.type}
                           </Badge>
                         )}
+                        {doc.blobUrl && (
+                          <Badge variant="secondary" className="text-xs">
+                            Loaded
+                          </Badge>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={downloadingDoc === doc.documentGU}
+                        disabled={loadingUrls.has(doc.documentGU)}
                         onClick={(e) => {
                           e.stopPropagation();
-                          downloadDocument(doc);
+                          openDocument(doc);
                         }}
-                        data-testid={`button-download-${index}`}
+                        data-testid={`button-open-${index}`}
                       >
-                        {downloadingDoc === doc.documentGU ? (
+                        {loadingUrls.has(doc.documentGU) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <ExternalLink className="h-4 w-4" />
