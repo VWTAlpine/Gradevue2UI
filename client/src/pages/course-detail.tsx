@@ -284,18 +284,36 @@ export default function CourseDetailPage() {
     return null;
   };
 
-  // Calculate cumulative grade at each assignment point
+  // Calculate cumulative grade at each assignment point (including missing assignments)
   const gradeHistoryData = useMemo(() => {
     if (!course?.assignments) return [];
     
-    // Get all graded assignments
+    // Get all graded assignments AND missing assignments
     const gradedAssignments = course.assignments
-      .map((a, originalIdx) => ({
-        assignment: a,
-        points: getAssignmentPoints(a),
-        originalIdx,
-      }))
-      .filter(item => item.points !== null);
+      .map((a, originalIdx) => {
+        const points = getAssignmentPoints(a);
+        const missing = isAssignmentMissing(a);
+        
+        // Include if has points OR is missing (missing counts as 0 earned)
+        if (points !== null) {
+          return {
+            assignment: a,
+            points,
+            isMissing: missing,
+            originalIdx,
+          };
+        } else if (missing) {
+          // Missing assignment without parsed points - estimate possible points
+          return {
+            assignment: a,
+            points: { earned: 0, possible: 100 }, // Default to 100 possible for missing
+            isMissing: true,
+            originalIdx,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
     
     if (gradedAssignments.length === 0) return [];
     
@@ -306,22 +324,22 @@ export default function CourseDetailPage() {
     const recent = chronological.slice(-20);
     
     // Calculate running grade after each assignment (accumulating from start)
-    const result: { name: string; fullName: string; score: number; index: number }[] = [];
+    const result: { name: string; fullName: string; score: number; index: number; isMissing: boolean }[] = [];
     let runningEarned = 0;
     let runningPossible = 0;
     
     // First, sum up all assignments before the recent 20 to get the starting point
     const beforeRecent = chronological.slice(0, -20);
     for (const item of beforeRecent) {
-      runningEarned += item.points!.earned;
-      runningPossible += item.points!.possible;
+      runningEarned += item.points.earned;
+      runningPossible += item.points.possible;
     }
     
     // Now calculate the grade progression for the recent 20
     for (let i = 0; i < recent.length; i++) {
       const item = recent[i];
-      runningEarned += item.points!.earned;
-      runningPossible += item.points!.possible;
+      runningEarned += item.points.earned;
+      runningPossible += item.points.possible;
       
       const cumulativeGrade = runningPossible > 0 ? (runningEarned / runningPossible) * 100 : 0;
       
@@ -330,6 +348,7 @@ export default function CourseDetailPage() {
         fullName: item.assignment.name,
         score: Math.round(cumulativeGrade * 10) / 10,
         index: i + 1,
+        isMissing: item.isMissing,
       });
     }
     
@@ -510,7 +529,10 @@ export default function CourseDetailPage() {
                           const data = payload[0].payload;
                           return (
                             <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
-                              <p className="font-medium">{data.fullName}</p>
+                              <p className="font-medium">
+                                {data.fullName}
+                                {data.isMissing && <span className="ml-2 text-red-500">(Missing)</span>}
+                              </p>
                               <p className="text-muted-foreground">
                                 Grade after: {data.score.toFixed(1)}%
                               </p>
@@ -525,8 +547,21 @@ export default function CourseDetailPage() {
                       dataKey="score"
                       stroke="#3b82f6"
                       strokeWidth={2}
-                      dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 5 }}
+                      dot={(props: any) => {
+                        const { cx, cy, payload } = props;
+                        const isMissing = payload?.isMissing;
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={isMissing ? 5 : 3}
+                            fill={isMissing ? "#ef4444" : "#3b82f6"}
+                            stroke={isMissing ? "#ef4444" : "#3b82f6"}
+                            strokeWidth={2}
+                          />
+                        );
+                      }}
+                      activeDot={{ r: 6 }}
                     />
                   </RechartsLineChart>
                 ) : (

@@ -194,7 +194,7 @@ export function AssignmentRow({
                   0
                 </p>
                 <p className="text-sm font-medium text-red-600 dark:text-red-400" data-testid={`assignment-percentage-${index}`}>
-                  missing
+                  0% missing
                 </p>
               </div>
             ) : earned !== null && max !== null ? (
