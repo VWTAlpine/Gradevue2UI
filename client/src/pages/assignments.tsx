@@ -110,11 +110,13 @@ export default function AssignmentsPage() {
   };
 
   const handleAddAssignment = (courseId: string) => {
-    if (!newAssignment.name || !newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
+    if (!newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
+    
+    const assignmentName = newAssignment.name.trim() || `Hypothetical ${Date.now().toString().slice(-4)}`;
     
     const assignment: HypotheticalAssignment = {
       id: `hypo-${Date.now()}`,
-      name: newAssignment.name,
+      name: assignmentName,
       type: newAssignment.type,
       pointsEarned: parseFloat(newAssignment.pointsEarned),
       pointsPossible: parseFloat(newAssignment.pointsPossible),

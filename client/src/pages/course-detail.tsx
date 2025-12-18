@@ -383,11 +383,13 @@ export default function CourseDetailPage() {
   const addedAssignments = overrides?.addedAssignments || [];
 
   const handleAddAssignment = () => {
-    if (!course || !newAssignment.name || !newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
+    if (!course || !newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
+    
+    const assignmentName = newAssignment.name.trim() || `Hypothetical ${Date.now().toString().slice(-4)}`;
     
     addHypotheticalAssignment(course.id, {
       id: `hypo-${Date.now()}`,
-      name: newAssignment.name,
+      name: assignmentName,
       type: newAssignment.type,
       pointsEarned: parseFloat(newAssignment.pointsEarned),
       pointsPossible: parseFloat(newAssignment.pointsPossible),
