@@ -191,10 +191,10 @@ export function AssignmentRow({
             {assignmentIsMissing ? (
               <div>
                 <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`assignment-points-${index}`}>
-                  0/{max ?? 0}
+                  0
                 </p>
                 <p className="text-sm font-medium text-red-600 dark:text-red-400" data-testid={`assignment-percentage-${index}`}>
-                  0% missing
+                  missing
                 </p>
               </div>
             ) : earned !== null && max !== null ? (

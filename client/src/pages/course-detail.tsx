@@ -252,27 +252,88 @@ export default function CourseDetailPage() {
     return null;
   };
 
+  // Helper to get earned and possible points from assignment
+  const getAssignmentPoints = (a: any): { earned: number; possible: number } | null => {
+    if (a.pointsEarned !== null && a.pointsEarned !== undefined &&
+        a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0) {
+      return { earned: a.pointsEarned, possible: a.pointsPossible };
+    }
+    
+    if (a.score) {
+      const scoreMatch = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
+      if (scoreMatch) {
+        return { earned: parseFloat(scoreMatch[1]), possible: parseFloat(scoreMatch[2]) };
+      }
+    }
+    
+    if (a.points) {
+      const pointsMatch = a.points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+      if (pointsMatch) {
+        return { earned: parseFloat(pointsMatch[1]), possible: parseFloat(pointsMatch[2]) };
+      }
+    }
+    
+    // For simple percentage scores, treat as X/100
+    if (a.score) {
+      const simpleNumber = parseFloat(a.score);
+      if (!isNaN(simpleNumber)) {
+        return { earned: simpleNumber, possible: 100 };
+      }
+    }
+    
+    return null;
+  };
+
+  // Calculate cumulative grade at each assignment point
   const gradeHistoryData = useMemo(() => {
     if (!course?.assignments) return [];
     
-    // Get all assignments and calculate percentages
-    const withScores = course.assignments
+    // Get all graded assignments
+    const gradedAssignments = course.assignments
       .map((a, originalIdx) => ({
         assignment: a,
-        percentage: getAssignmentPercentage(a),
+        points: getAssignmentPoints(a),
         originalIdx,
       }))
-      .filter(item => item.percentage !== null);
+      .filter(item => item.points !== null);
     
-    // Take the last 20 graded assignments (reverse to show oldest first)
-    const recent = withScores.slice().reverse().slice(0, 20);
+    if (gradedAssignments.length === 0) return [];
     
-    return recent.map((item, idx) => ({
-      name: item.assignment.name.length > 15 ? item.assignment.name.substring(0, 15) + "..." : item.assignment.name,
-      fullName: item.assignment.name,
-      score: Math.round((item.percentage as number) * 10) / 10,
-      index: idx + 1,
-    }));
+    // Assignments are typically newest first, so reverse for chronological order
+    const chronological = gradedAssignments.slice().reverse();
+    
+    // Take the most recent 20 (last 20 in chronological order)
+    const recent = chronological.slice(-20);
+    
+    // Calculate running grade after each assignment (accumulating from start)
+    const result: { name: string; fullName: string; score: number; index: number }[] = [];
+    let runningEarned = 0;
+    let runningPossible = 0;
+    
+    // First, sum up all assignments before the recent 20 to get the starting point
+    const beforeRecent = chronological.slice(0, -20);
+    for (const item of beforeRecent) {
+      runningEarned += item.points!.earned;
+      runningPossible += item.points!.possible;
+    }
+    
+    // Now calculate the grade progression for the recent 20
+    for (let i = 0; i < recent.length; i++) {
+      const item = recent[i];
+      runningEarned += item.points!.earned;
+      runningPossible += item.points!.possible;
+      
+      const cumulativeGrade = runningPossible > 0 ? (runningEarned / runningPossible) * 100 : 0;
+      
+      result.push({
+        name: item.assignment.name.length > 15 ? item.assignment.name.substring(0, 15) + "..." : item.assignment.name,
+        fullName: item.assignment.name,
+        score: Math.round(cumulativeGrade * 10) / 10,
+        index: i + 1,
+      });
+    }
+    
+    return result;
   }, [course]);
 
   const displayGrade = course?.grade ?? 0;
@@ -441,7 +502,7 @@ export default function CourseDetailPage() {
                       domain={[0, 100]}
                       tick={{ fontSize: 11 }}
                       className="fill-muted-foreground"
-                      label={{ value: "Score %", angle: -90, position: "insideLeft", fontSize: 10 }}
+                      label={{ value: "Grade %", angle: -90, position: "insideLeft", fontSize: 10 }}
                     />
                     <Tooltip
                       content={({ active, payload }) => {
@@ -451,7 +512,7 @@ export default function CourseDetailPage() {
                             <div className="rounded-lg border bg-card p-2 shadow-lg text-sm">
                               <p className="font-medium">{data.fullName}</p>
                               <p className="text-muted-foreground">
-                                Score: {data.score.toFixed(1)}%
+                                Grade after: {data.score.toFixed(1)}%
                               </p>
                             </div>
                           );
