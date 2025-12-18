@@ -565,16 +565,23 @@ export default function CourseDetailPage() {
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="#3b82f6"
+                      stroke={(() => {
+                        // Color the entire line based on current grade
+                        const currentGrade = course?.grade ?? 0;
+                        if (currentGrade >= 90) return "#10b981"; // emerald for A
+                        if (currentGrade >= 80) return "#3b82f6"; // blue for B
+                        if (currentGrade >= 70) return "#f59e0b"; // amber for C
+                        if (currentGrade >= 60) return "#f97316"; // orange for D
+                        return "#ef4444"; // red for F
+                      })()}
                       strokeWidth={2}
                       dot={(props: any) => {
                         const { cx, cy, payload } = props;
                         const isMissing = payload?.isMissing;
-                        const score = payload?.score ?? 0;
                         
-                        // Color based on grade
-                        const getGradeHexColor = (pct: number, missing: boolean) => {
-                          if (missing) return "#ef4444"; // red for missing
+                        // Use current grade color for dots, red for missing
+                        const currentGrade = course?.grade ?? 0;
+                        const getGradeHexColor = (pct: number) => {
                           if (pct >= 90) return "#10b981"; // emerald for A
                           if (pct >= 80) return "#3b82f6"; // blue for B
                           if (pct >= 70) return "#f59e0b"; // amber for C
@@ -582,7 +589,7 @@ export default function CourseDetailPage() {
                           return "#ef4444"; // red for F
                         };
                         
-                        const dotColor = getGradeHexColor(score, isMissing);
+                        const dotColor = isMissing ? "#ef4444" : getGradeHexColor(currentGrade);
                         
                         return (
                           <circle
