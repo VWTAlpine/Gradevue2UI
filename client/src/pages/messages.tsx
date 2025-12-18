@@ -33,8 +33,8 @@ export default function MessagesPage() {
           credentials.password
         );
         await client.checkLogin();
-        const rawMsgs = await client.messages();
-        console.log("Raw messages data:", JSON.stringify(rawMsgs, null, 2));
+        // Use SynergyMailGetData like GradeVue does
+        const rawMsgs = await client.synergyMailGetData();
         messagesData = parseMessages(rawMsgs);
       } catch (clientErr: any) {
         console.log("Client-side messages fetch failed, trying server:", clientErr.message);

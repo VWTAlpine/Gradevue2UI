@@ -147,6 +147,10 @@ export class StudentVueClient {
     return (await this.request('GetPXPMessages')).PXPMessagesData;
   }
 
+  async synergyMailGetData(): Promise<any> {
+    return (await this.request('SynergyMailGetData')).SynergyMailDataXML;
+  }
+
   async studentDocuments(): Promise<any> {
     return (await this.request('GetStudentDocumentInitialData')).StudentDocuments;
   }
@@ -156,8 +160,23 @@ export class StudentVueClient {
     return result;
   }
 
+  async reportCard(documentGU: string): Promise<any> {
+    return (await this.request('GetReportCardDocumentData', { DocumentGU: documentGU })).DocumentData;
+  }
+
   async getDocumentContent(documentGU: string): Promise<{ base64Code: string; fileName: string; docType: string } | null> {
     try {
+      // Try GetReportCardDocumentData first (like GradeVue)
+      const reportCard = await this.reportCard(documentGU);
+      if (reportCard && (reportCard.Base64Code || reportCard._Base64Code)) {
+        return {
+          base64Code: reportCard.Base64Code || reportCard._Base64Code || "",
+          fileName: reportCard.FileName || reportCard._FileName || "document.pdf",
+          docType: reportCard.DocType || reportCard._DocType || "PDF",
+        };
+      }
+
+      // Fallback to GetContentOfAttachedDoc
       const result = await this.getDocument(documentGU);
       const docData = result?.AttachmentXML?.DocumentData || result?.DocumentData;
       if (docData) {
@@ -205,31 +224,69 @@ export function parseMessages(data: any): ParsedMessages {
   const messages: ParsedMessage[] = [];
   
   try {
-    const messageList = 
-      data?.MessageListings?.MessageListing ||
-      data?.Messages?.Message ||
-      data?.messages ||
-      [];
-    const msgArray = Array.isArray(messageList) ? messageList : (messageList ? [messageList] : []);
+    // Try SynergyMailGetData format first (like GradeVue)
+    const inboxMessages = data?.InboxItemListings?.MessageXML || [];
+    const inboxArray = Array.isArray(inboxMessages) ? inboxMessages : (inboxMessages ? [inboxMessages] : []);
     
-    for (const msg of msgArray) {
-      if (!msg) continue;
+    if (inboxArray.length > 0) {
+      for (const msg of inboxArray) {
+        if (!msg) continue;
+        
+        // Get sender from From.RecipientXML
+        let senderName = "Unknown";
+        const fromData = msg.From?.RecipientXML;
+        if (fromData) {
+          const details1 = fromData._Details1 || "";
+          const details2 = fromData._Details2 || "";
+          senderName = details1 || details2 || "Unknown";
+        }
+        
+        messages.push({
+          id: msg._SMMessageGU || msg._SMMsgPersonGU || "",
+          type: details2TypeToLabel(fromData?._Details2 || ""),
+          subject: msg._Subject || "No Subject",
+          from: senderName,
+          date: msg._SendDateTimeFormattedLong || msg._SendDateTimeFormattedShort || msg._SendDateTime || "",
+          content: msg._MessageText || "",
+          read: msg._MailRead === "true" || msg._MailRead === true,
+        });
+      }
+    } else {
+      // Fallback to GetPXPMessages format
+      const messageList = 
+        data?.MessageListings?.MessageListing ||
+        data?.Messages?.Message ||
+        data?.messages ||
+        [];
+      const msgArray = Array.isArray(messageList) ? messageList : (messageList ? [messageList] : []);
       
-      messages.push({
-        id: msg._ID || msg.ID || msg._IconURL || msg.id || "",
-        type: msg._Type || msg.Type || msg.type || "Message",
-        subject: msg._Subject || msg.Subject || msg.subject || "No Subject",
-        from: msg._From || msg.From || msg.from || "Unknown",
-        date: msg._BeginDate || msg.BeginDate || msg._Date || msg.date || "",
-        content: msg._Content || msg.Content || msg.content || msg._Message || msg.message || "",
-        read: (msg._Read || msg.Read || msg.read) === "true" || (msg._Read || msg.Read || msg.read) === true,
-      });
+      for (const msg of msgArray) {
+        if (!msg) continue;
+        
+        messages.push({
+          id: msg._ID || msg.ID || msg._IconURL || msg.id || "",
+          type: msg._Type || msg.Type || msg.type || "Message",
+          subject: msg._Subject || msg.Subject || msg.subject || "No Subject",
+          from: msg._From || msg.From || msg.from || "Unknown",
+          date: msg._BeginDate || msg.BeginDate || msg._Date || msg.date || "",
+          content: msg._Content || msg.Content || msg.content || msg._Message || msg.message || "",
+          read: (msg._Read || msg.Read || msg.read) === "true" || (msg._Read || msg.Read || msg.read) === true,
+        });
+      }
     }
   } catch (e) {
     console.error("Error parsing messages:", e);
   }
   
   return { messages };
+}
+
+function details2TypeToLabel(details2: string): string {
+  if (details2.toLowerCase().includes("teacher")) return "Teacher";
+  if (details2.toLowerCase().includes("staff")) return "Staff";
+  if (details2.toLowerCase().includes("student")) return "Student";
+  if (details2.toLowerCase().includes("parent")) return "Parent";
+  return "Message";
 }
 
 export function parseDocuments(data: any): ParsedDocuments {
@@ -344,10 +401,11 @@ function parseAttendanceCode(code: string): "Tardy" | "Absent" | "Excused" | "Un
 
 export function parseAttendance(attendance: any): ParsedAttendance {
   const records: ParsedAttendanceRecord[] = [];
-  let totalAbsences = 0;
-  let totalTardies = 0;
-  let totalExcused = 0;
-  let totalUnexcused = 0;
+  
+  // Track unique days for counting (not individual periods)
+  const daysWithTardy = new Set<string>();
+  const daysWithExcused = new Set<string>();
+  const daysWithUnexcused = new Set<string>();
 
   try {
     // Try SOAP response format first (from client-side)
@@ -365,6 +423,11 @@ export function parseAttendance(attendance: any): ParsedAttendance {
       const periodsData = absence.Periods?.Period || absence.periods || [];
       const periodsList = Array.isArray(periodsData) ? periodsData : (periodsData ? [periodsData] : []);
       
+      // Track status for this day (we only count each day once in totals)
+      let dayHasTardy = false;
+      let dayHasExcused = false;
+      let dayHasUnexcused = false;
+      
       if (periodsList.length > 0) {
         for (const period of periodsList) {
           if (!period) continue;
@@ -380,14 +443,13 @@ export function parseAttendance(attendance: any): ParsedAttendance {
           
           const status = parseAttendanceCode(attendanceCode || iconName);
           
+          // Track for this day
           if (status === "Tardy") {
-            totalTardies++;
+            dayHasTardy = true;
           } else if (status === "Excused") {
-            totalExcused++;
-            totalAbsences++;
+            dayHasExcused = true;
           } else {
-            totalAbsences++;
-            totalUnexcused++;
+            dayHasUnexcused = true;
           }
           
           records.push({
@@ -405,13 +467,11 @@ export function parseAttendance(attendance: any): ParsedAttendance {
         const status = parseAttendanceCode(statusCode);
         
         if (status === "Tardy") {
-          totalTardies++;
+          dayHasTardy = true;
         } else if (status === "Excused") {
-          totalExcused++;
-          totalAbsences++;
+          dayHasExcused = true;
         } else {
-          totalAbsences++;
-          totalUnexcused++;
+          dayHasUnexcused = true;
         }
         
         records.push({
@@ -423,10 +483,21 @@ export function parseAttendance(attendance: any): ParsedAttendance {
           description: reason,
         });
       }
+      
+      // Add to day tracking sets (only count each day once)
+      if (dayHasTardy && dateVal) daysWithTardy.add(dateVal);
+      if (dayHasExcused && dateVal) daysWithExcused.add(dateVal);
+      if (dayHasUnexcused && dateVal) daysWithUnexcused.add(dateVal);
     }
   } catch (e) {
     console.error("Error parsing attendance:", e);
   }
+
+  // Count by day instead of by period
+  const totalTardies = daysWithTardy.size;
+  const totalExcused = daysWithExcused.size;
+  const totalUnexcused = daysWithUnexcused.size;
+  const totalAbsences = totalExcused + totalUnexcused;
 
   return {
     totalAbsences,
