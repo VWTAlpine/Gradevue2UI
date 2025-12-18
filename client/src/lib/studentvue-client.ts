@@ -186,17 +186,64 @@ export function parseDocuments(data: any): ParsedDocuments {
   const documents: ParsedDocument[] = [];
   
   try {
-    const studentDocuments = data?.StudentDocumentDatas?.StudentDocumentData || [];
+    // Log raw data for debugging
+    console.log("Raw documents data:", JSON.stringify(data, null, 2));
+    
+    // Try multiple possible paths for document data
+    const studentDocuments = 
+      data?.StudentDocumentDatas?.StudentDocumentData ||
+      data?.StudentDocuments?.StudentDocument ||
+      data?.Documents?.Document ||
+      data?.studentDocuments ||
+      [];
     const docList = Array.isArray(studentDocuments) ? studentDocuments : (studentDocuments ? [studentDocuments] : []);
+    
+    console.log("Document list:", docList);
     
     for (const doc of docList) {
       if (!doc) continue;
       
+      // Log individual doc to see field names
+      console.log("Document entry:", doc);
+      
+      // Try multiple possible field names for document name/comment
+      const docName = 
+        doc._DocumentName || doc.DocumentName ||
+        doc._DocumentComment || doc.DocumentComment ||
+        doc._Comment || doc.Comment ||
+        doc._Name || doc.Name ||
+        doc._FileName || doc.FileName ||
+        doc._Title || doc.Title ||
+        doc._Description || doc.Description ||
+        "Unknown Document";
+      
+      // Try multiple possible field names for date
+      const docDate =
+        doc._DocumentDate || doc.DocumentDate ||
+        doc._Date || doc.Date ||
+        doc._DateEntered || doc.DateEntered ||
+        "";
+      
+      // Try multiple possible field names for type
+      const docType =
+        doc._DocumentType || doc.DocumentType ||
+        doc._Type || doc.Type ||
+        doc._Category || doc.Category ||
+        "Document";
+      
+      // Try multiple possible field names for document ID
+      const docGU =
+        doc._DocumentGU || doc.DocumentGU ||
+        doc._GU || doc.GU ||
+        doc._DocumentID || doc.DocumentID ||
+        doc._ID || doc.ID ||
+        "";
+      
       documents.push({
-        name: doc._DocumentName || doc.DocumentName || "Unknown Document",
-        date: doc._DocumentDate || doc.DocumentDate || "",
-        type: doc._DocumentType || doc.DocumentType || "Document",
-        documentGU: doc._DocumentGU || doc.DocumentGU || "",
+        name: docName,
+        date: docDate,
+        type: docType,
+        documentGU: docGU,
       });
     }
   } catch (e) {

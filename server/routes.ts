@@ -380,15 +380,40 @@ export async function registerRoutes(
 
       try {
         const documentsData = await loginResult.client.documents();
+        console.log("Server raw documents data:", JSON.stringify(documentsData, null, 2));
         const documents: any[] = [];
 
         const docList = documentsData || [];
         for (const doc of docList) {
+          console.log("Server document entry:", JSON.stringify(doc, null, 2));
+          
+          // Try multiple possible field names based on studentvue npm package structure
+          const docName = 
+            doc.document?.name || doc.name ||
+            doc.document?.comment || doc.comment ||
+            doc.document?.title || doc.title ||
+            doc.document?.fileName || doc.fileName ||
+            "Unknown Document";
+          
+          const docDate =
+            doc.document?.date || doc.date ||
+            "";
+          
+          const docType =
+            doc.document?.type || doc.type ||
+            doc.document?.category || doc.category ||
+            "Document";
+          
+          const docGU =
+            doc.document?.documentGU || doc.documentGU ||
+            doc.document?.file?.documentGU || doc.file?.documentGU ||
+            "";
+          
           documents.push({
-            name: doc.document?.name || doc.name || "Unknown Document",
-            date: doc.document?.date || doc.date || "",
-            type: doc.document?.type || doc.type || "Document",
-            documentGU: doc.document?.documentGU || doc.documentGU || "",
+            name: docName,
+            date: docDate,
+            type: docType,
+            documentGU: docGU,
           });
         }
 
