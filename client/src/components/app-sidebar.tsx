@@ -196,28 +196,32 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {gradebook.courses.map((course, index) => (
-                  <SidebarMenuItem key={course.id || index}>
-                    <SidebarMenuButton
-                      asChild
-                      className="justify-between gap-2"
-                    >
-                      <Link
-                        href={`/course/${index}`}
-                        onClick={() => handleCourseClick(course)}
-                        data-testid={`nav-course-${index}`}
+                {gradebook.courses.map((course, index) => {
+                  const isCourseActive = location === `/course/${index}`;
+                  return (
+                    <SidebarMenuItem key={course.id || index}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isCourseActive}
+                        className={`justify-between gap-2 ${isCourseActive ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
                       >
-                        <span className="truncate text-sm">{course.name}</span>
-                        <Badge
-                          variant="secondary"
-                          className={`ml-auto shrink-0 ${getGradeBgColor(course.letterGrade)}`}
+                        <Link
+                          href={`/course/${index}`}
+                          onClick={() => handleCourseClick(course)}
+                          data-testid={`nav-course-${index}`}
                         >
-                          {course.letterGrade}
-                        </Badge>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                          <span className="truncate text-sm">{course.name}</span>
+                          <Badge
+                            variant="secondary"
+                            className={`ml-auto shrink-0 ${getGradeBgColor(course.letterGrade)}`}
+                          >
+                            {course.letterGrade}
+                          </Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

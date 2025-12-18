@@ -56,6 +56,7 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
         <div className="text-sm text-muted-foreground">
           <p>{course.teacher || "Teacher"}</p>
           <p>Period {course.period || "N/A"}</p>
+          {course.room && <p>Room {course.room}</p>}
         </div>
 
         <div className="flex items-baseline justify-between gap-2 pt-2">
