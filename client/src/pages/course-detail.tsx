@@ -296,6 +296,15 @@ export default function CourseDetailPage() {
         
         // Include if has points OR is missing (missing counts as 0 earned)
         if (points !== null) {
+          // If missing, ensure earned is 0
+          if (missing) {
+            return {
+              assignment: a,
+              points: { earned: 0, possible: points.possible },
+              isMissing: true,
+              originalIdx,
+            };
+          }
           return {
             assignment: a,
             points,
@@ -303,10 +312,11 @@ export default function CourseDetailPage() {
             originalIdx,
           };
         } else if (missing) {
-          // Missing assignment without parsed points - estimate possible points
+          // Missing assignment without parsed points - check if assignment has pointsPossible
+          const possiblePoints = a.pointsPossible ?? 100;
           return {
             assignment: a,
-            points: { earned: 0, possible: 100 }, // Default to 100 possible for missing
+            points: { earned: 0, possible: possiblePoints },
             isMissing: true,
             originalIdx,
           };
