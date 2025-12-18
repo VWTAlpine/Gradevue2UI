@@ -570,13 +570,27 @@ export default function CourseDetailPage() {
                       dot={(props: any) => {
                         const { cx, cy, payload } = props;
                         const isMissing = payload?.isMissing;
+                        const score = payload?.score ?? 0;
+                        
+                        // Color based on grade
+                        const getGradeHexColor = (pct: number, missing: boolean) => {
+                          if (missing) return "#ef4444"; // red for missing
+                          if (pct >= 90) return "#10b981"; // emerald for A
+                          if (pct >= 80) return "#3b82f6"; // blue for B
+                          if (pct >= 70) return "#f59e0b"; // amber for C
+                          if (pct >= 60) return "#f97316"; // orange for D
+                          return "#ef4444"; // red for F
+                        };
+                        
+                        const dotColor = getGradeHexColor(score, isMissing);
+                        
                         return (
                           <circle
                             cx={cx}
                             cy={cy}
-                            r={isMissing ? 5 : 3}
-                            fill={isMissing ? "#ef4444" : "#3b82f6"}
-                            stroke={isMissing ? "#ef4444" : "#3b82f6"}
+                            r={isMissing ? 5 : 4}
+                            fill={dotColor}
+                            stroke={dotColor}
                             strokeWidth={2}
                           />
                         );
