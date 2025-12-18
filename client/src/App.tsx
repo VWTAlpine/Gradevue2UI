@@ -37,10 +37,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-1 flex-col overflow-hidden">
           <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b px-4">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-4">
+              <RefreshIndicator />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">{children}</main>
-          <RefreshIndicator />
           <Footer />
         </div>
       </div>

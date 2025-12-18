@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useGrades } from "@/lib/gradeContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -56,7 +56,7 @@ export function RefreshIndicator() {
 
   return (
     <div 
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-muted/90 backdrop-blur-sm border pl-1.5 pr-4 py-1.5 shadow-lg"
+      className="flex items-center gap-2"
       data-testid="refresh-indicator"
     >
       <Avatar className="h-7 w-7">
@@ -64,7 +64,7 @@ export function RefreshIndicator() {
           {initials}
         </AvatarFallback>
       </Avatar>
-      <span className="text-sm text-muted-foreground">
+      <span className="text-sm text-muted-foreground hidden sm:inline">
         Last updated {timeAgo}
       </span>
       <button
