@@ -254,9 +254,13 @@ export default function CourseDetailPage() {
 
   // Helper to get earned and possible points from assignment
   const getAssignmentPoints = (a: any): { earned: number; possible: number } | null => {
-    if (a.pointsEarned !== null && a.pointsEarned !== undefined &&
-        a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0) {
-      return { earned: a.pointsEarned, possible: a.pointsPossible };
+    // First, get pointsPossible from assignment if available
+    const assignmentMax = (a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0)
+      ? a.pointsPossible
+      : null;
+    
+    if (a.pointsEarned !== null && a.pointsEarned !== undefined && assignmentMax !== null) {
+      return { earned: a.pointsEarned, possible: assignmentMax };
     }
     
     if (a.score) {
@@ -273,14 +277,15 @@ export default function CourseDetailPage() {
       }
     }
     
-    // For simple percentage scores, treat as X/100
+    // For simple percentage scores, use assignmentMax if available
     if (a.score) {
       const simpleNumber = parseFloat(a.score);
       if (!isNaN(simpleNumber)) {
-        return { earned: simpleNumber, possible: 100 };
+        return { earned: simpleNumber, possible: assignmentMax ?? 100 };
       }
     }
     
+    // If we have assignmentMax but couldn't parse earned, return null (let missing handler deal with it)
     return null;
   };
 

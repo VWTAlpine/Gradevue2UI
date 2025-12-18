@@ -30,17 +30,25 @@ export function AssignmentRow({
   const [editPossible, setEditPossible] = useState("");
 
   const parseScore = () => {
+    // Get pointsPossible from assignment if available
+    const assignmentMax = (assignment.pointsPossible !== null && assignment.pointsPossible !== undefined) 
+      ? assignment.pointsPossible 
+      : null;
+    
     if (assignment.pointsEarned !== null && assignment.pointsEarned !== undefined &&
-        assignment.pointsPossible !== null && assignment.pointsPossible !== undefined) {
+        assignmentMax !== null) {
       const earned = assignment.pointsEarned;
-      const max = assignment.pointsPossible;
-      return { earned, max, percentage: max > 0 ? (earned / max) * 100 : null };
+      return { earned, max: assignmentMax, percentage: assignmentMax > 0 ? (earned / assignmentMax) * 100 : null };
     }
     
     const score = assignment.score;
     const points = assignment.points;
     
     if (!score || score === "Not Graded" || score === "N/A") {
+      // Still try to get max from assignment.pointsPossible
+      if (assignmentMax !== null) {
+        return { earned: null, max: assignmentMax, percentage: null };
+      }
       return { earned: null, max: null, percentage: null };
     }
 
@@ -60,7 +68,14 @@ export function AssignmentRow({
 
     const simpleNumber = parseFloat(score);
     if (!isNaN(simpleNumber)) {
-      return { earned: simpleNumber, max: 100, percentage: simpleNumber };
+      // Use assignmentMax if available, otherwise default to 100
+      const max = assignmentMax ?? 100;
+      return { earned: simpleNumber, max, percentage: max > 0 ? (simpleNumber / max) * 100 : simpleNumber };
+    }
+
+    // Return assignmentMax even if we couldn't parse earned
+    if (assignmentMax !== null) {
+      return { earned: null, max: assignmentMax, percentage: null };
     }
 
     return { earned: null, max: null, percentage: null };
