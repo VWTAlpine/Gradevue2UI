@@ -142,6 +142,49 @@ export class StudentVueClient {
   async attendance(): Promise<any> {
     return (await this.request('Attendance')).Attendance;
   }
+
+  async studentDocuments(): Promise<any> {
+    return (await this.request('GetStudentDocumentInitialData')).StudentDocuments;
+  }
+
+  async getDocument(documentGU: string): Promise<any> {
+    return (await this.request('GetContentOfAttachedDoc', { DocumentGU: documentGU }));
+  }
+}
+
+export interface ParsedDocument {
+  name: string;
+  date: string;
+  type: string;
+  documentGU: string;
+}
+
+export interface ParsedDocuments {
+  documents: ParsedDocument[];
+}
+
+export function parseDocuments(data: any): ParsedDocuments {
+  const documents: ParsedDocument[] = [];
+  
+  try {
+    const studentDocuments = data?.StudentDocumentDatas?.StudentDocumentData || [];
+    const docList = Array.isArray(studentDocuments) ? studentDocuments : (studentDocuments ? [studentDocuments] : []);
+    
+    for (const doc of docList) {
+      if (!doc) continue;
+      
+      documents.push({
+        name: doc._DocumentName || doc.DocumentName || "Unknown Document",
+        date: doc._DocumentDate || doc.DocumentDate || "",
+        type: doc._DocumentType || doc.DocumentType || "Document",
+        documentGU: doc._DocumentGU || doc.DocumentGU || "",
+      });
+    }
+  } catch (e) {
+    console.error("Error parsing documents:", e);
+  }
+  
+  return { documents };
 }
 
 export interface ParsedAttendance {

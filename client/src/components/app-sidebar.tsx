@@ -24,6 +24,7 @@ import {
   LogOut,
   GraduationCap,
   Building,
+  FolderOpen,
 } from "lucide-react";
 import logoImageLight from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
 import logoImageDark from "@assets/Gradevue_Design_Pack_(2)_1766033013644.png";
@@ -49,6 +50,11 @@ const mainNavItems = [
     title: "Attendance",
     url: "/attendance",
     icon: Calendar,
+  },
+  {
+    title: "Documents",
+    url: "/documents",
+    icon: FolderOpen,
   },
   {
     title: "Settings",

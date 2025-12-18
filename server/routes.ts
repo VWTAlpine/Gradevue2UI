@@ -356,6 +356,66 @@ export async function registerRoutes(
     }
   });
 
+  // Documents endpoint
+  app.post("/api/studentvue/documents", async (req, res) => {
+    try {
+      const { district, username, password } = req.body;
+
+      if (!district || !username || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required credentials" 
+        });
+      }
+
+      const districtUrl = normalizeDistrictUrl(district);
+      const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+      
+      if (!loginResult.client) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Authentication failed" 
+        });
+      }
+
+      try {
+        const documentsData = await loginResult.client.documents();
+        const documents: any[] = [];
+
+        const docList = documentsData?.documents || [];
+        for (const doc of docList) {
+          documents.push({
+            name: doc.name || "Unknown Document",
+            date: doc.date || "",
+            type: doc.type || "Document",
+            documentGU: doc.documentGU || "",
+          });
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            documents,
+          },
+        });
+      } catch (fetchErr: any) {
+        console.error("Documents fetch error:", fetchErr);
+        return res.json({
+          success: true,
+          data: {
+            documents: [],
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error("Documents endpoint error:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message 
+      });
+    }
+  });
+
   return httpServer;
 }
 
