@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useGrades } from "@/lib/gradeContext";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoImage from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
+import logoImageLight from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
+import logoImageDark from "@assets/Gradevue_Design_Pack_(2)_1766033013644.png";
+import { useTheme } from "@/lib/themeContext";
 import { GraduationCap, Lock, User, Globe, Loader2, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { StudentVueClient, parseGradebook } from "@/lib/studentvue-client";
@@ -16,6 +18,8 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { setGradebook, setCredentials, setIsLoading, isLoading } = useGrades();
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const logoImage = theme === "dark" ? logoImageDark : logoImageLight;
 
   const [district, setDistrict] = useState("");
   const [username, setUsername] = useState("");

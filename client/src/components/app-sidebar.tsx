@@ -25,7 +25,9 @@ import {
   GraduationCap,
   Building,
 } from "lucide-react";
-import logoImage from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
+import logoImageLight from "@assets/Gradevue_Design_Pack_(3)_1765931869180.png";
+import logoImageDark from "@assets/Gradevue_Design_Pack_(2)_1766033013644.png";
+import { useTheme } from "@/lib/themeContext";
 
 const mainNavItems = [
   {
@@ -58,6 +60,8 @@ const mainNavItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { gradebook, logout, setSelectedCourse } = useGrades();
+  const { theme } = useTheme();
+  const logoImage = theme === "dark" ? logoImageDark : logoImageLight;
 
   const calculateOverallGPA = () => {
     if (!gradebook?.courses) return "0.00";
