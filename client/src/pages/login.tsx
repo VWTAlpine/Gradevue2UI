@@ -26,10 +26,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Sanitize input to remove potential XSS/injection characters
+  const sanitizeInput = (input: string): string => {
+    return input
+      .trim()
+      .replace(/[<>]/g, '') // Remove angle brackets
+      .slice(0, 500); // Limit length
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!district || !username || !password) {
+    // Sanitize all inputs
+    const sanitizedDistrict = sanitizeInput(district);
+    const sanitizedUsername = sanitizeInput(username);
+    const sanitizedPassword = password.trim().slice(0, 500); // Don't remove chars from password, just trim and limit
+
+    if (!sanitizedDistrict || !sanitizedUsername || !sanitizedPassword) {
       toast({
         title: "Missing Fields",
         description: "Please fill in all fields",
@@ -46,27 +59,18 @@ export default function LoginPage() {
 
       // Try client-side login first (direct browser to StudentVue)
       try {
-        console.log("Attempting client-side login to:", district);
-        const client = new StudentVueClient(district, username, password);
+        const client = new StudentVueClient(sanitizedDistrict, sanitizedUsername, sanitizedPassword);
         
         await client.checkLogin();
-        console.log("Client-side login successful, fetching gradebook...");
         
         const [gradebook, studentInfo] = await Promise.all([
-          client.gradebook().catch((e) => {
-            console.error("Gradebook fetch error:", e);
-            return null;
-          }),
-          client.studentInfo().catch((e) => {
-            console.error("Student info fetch error:", e);
-            return null;
-          }),
+          client.gradebook().catch(() => null),
+          client.studentInfo().catch(() => null),
         ]);
 
         if (gradebook) {
           parsedData = parseGradebook(gradebook, studentInfo);
           loginMethod = "client";
-          console.log(`Client-side: Fetched ${parsedData.courses?.length || 0} courses`);
           
           // Check if any courses are missing assignments
           const hasAssignments = parsedData.courses?.some(
@@ -74,7 +78,6 @@ export default function LoginPage() {
           );
           
           if (!hasAssignments && parsedData.courses && parsedData.courses.length > 0) {
-            console.log("Client-side: No assignments found, trying server-side for better parsing...");
             try {
               const res = await fetch("/api/studentvue/login", {
                 method: "POST",
@@ -82,7 +85,11 @@ export default function LoginPage() {
                   "Content-Type": "application/json",
                   "X-Requested-With": "XMLHttpRequest"
                 },
-                body: JSON.stringify({ district, username, password }),
+                body: JSON.stringify({ 
+                  district: sanitizedDistrict, 
+                  username: sanitizedUsername, 
+                  password: sanitizedPassword 
+                }),
                 credentials: "include",
               });
               const serverResponse = await res.json();
@@ -93,32 +100,32 @@ export default function LoginPage() {
                 );
                 
                 if (serverHasAssignments) {
-                  console.log("Server-side: Found assignments, using server data");
                   parsedData = serverResponse.data;
                   loginMethod = "server-fallback";
-                } else {
-                  console.log("Server-side: Also no assignments, keeping client data");
                 }
               }
-            } catch (serverFallbackErr) {
-              console.log("Server-side fallback failed, using client data:", serverFallbackErr);
+            } catch {
+              // Server fallback failed, keep client data
             }
           }
         }
-      } catch (clientError: any) {
-        console.log("Client-side login failed, trying server-side:", clientError.message);
+      } catch {
+        // Client-side login failed, will try server-side
       }
 
       // If client-side failed completely, try server-side
       if (!parsedData) {
-        console.log("Attempting server-side login...");
         const res = await fetch("/api/studentvue/login", {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest"
           },
-          body: JSON.stringify({ district, username, password }),
+          body: JSON.stringify({ 
+            district: sanitizedDistrict, 
+            username: sanitizedUsername, 
+            password: sanitizedPassword 
+          }),
           credentials: "include",
         });
         const response = await res.json();
@@ -126,7 +133,6 @@ export default function LoginPage() {
         if (response.success && response.data) {
           parsedData = response.data;
           loginMethod = "server";
-          console.log(`Server-side: Fetched ${parsedData.courses?.length || 0} courses`);
         } else {
           throw new Error(response.error || "Login failed");
         }
@@ -137,7 +143,11 @@ export default function LoginPage() {
       }
       
       setGradebook(parsedData);
-      setCredentials({ district, username, password });
+      setCredentials({ 
+        district: sanitizedDistrict, 
+        username: sanitizedUsername, 
+        password: sanitizedPassword 
+      });
       toast({
         title: "Success",
         description: `Successfully logged in to StudentVue`,

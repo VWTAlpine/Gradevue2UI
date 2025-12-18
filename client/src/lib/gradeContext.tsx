@@ -301,7 +301,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedGradebook = localStorage.getItem("gradebook");
-    const savedCredentials = localStorage.getItem("credentials");
+    const savedCredentials = sessionStorage.getItem("credentials");
     const savedLastUpdated = localStorage.getItem("lastUpdated");
     
     if (savedGradebook) {
@@ -316,7 +316,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       try {
         setCredentials(JSON.parse(savedCredentials));
       } catch (e) {
-        localStorage.removeItem("credentials");
+        sessionStorage.removeItem("credentials");
       }
     }
 
@@ -347,9 +347,9 @@ export function GradeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (credentials) {
-      localStorage.setItem("credentials", JSON.stringify(credentials));
+      sessionStorage.setItem("credentials", JSON.stringify(credentials));
     } else {
-      localStorage.removeItem("credentials");
+      sessionStorage.removeItem("credentials");
     }
   }, [credentials]);
 
@@ -358,7 +358,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     setCredentials(null);
     setSelectedCourse(null);
     localStorage.removeItem("gradebook");
-    localStorage.removeItem("credentials");
+    sessionStorage.removeItem("credentials");
   };
 
   return (

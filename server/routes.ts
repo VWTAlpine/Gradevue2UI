@@ -84,8 +84,6 @@ export async function registerRoutes(
     let lastError: any = null;
     
     for (const url of variants) {
-      console.log(`Attempting login to: ${url}`);
-      
       try {
         const client = await Promise.race([
           StudentVue.login(url, {
@@ -97,10 +95,8 @@ export async function registerRoutes(
           )
         ]);
         
-        console.log(`Login successful with URL: ${url}`);
         return { client, usedUrl: url };
       } catch (err: any) {
-        console.error(`Login failed for ${url}:`, err.message);
         lastError = err;
         
         // If it's clearly an auth error (not network/config), don't try other URLs
@@ -129,9 +125,6 @@ export async function registerRoutes(
       // Normalize the district URL for compatibility
       const districtUrl = normalizeDistrictUrl(district);
 
-      console.log(`Starting login process for district: ${districtUrl}`);
-      console.log(`Username provided: ${username.substring(0, 3)}***`);
-
       // Timeout wrapper for StudentVue operations
       const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
         return Promise.race([
@@ -149,7 +142,6 @@ export async function registerRoutes(
         if (!loginResult.client) {
           // Enhanced error handling with detailed messages
           const errorMsg = loginResult.error?.toLowerCase() || '';
-          console.error("All login attempts failed. Last error:", loginResult.error);
           
           // Check for specific error patterns
           if (errorMsg.includes('invalid') || errorMsg.includes('incorrect') || errorMsg.includes('password') || errorMsg.includes('username') || errorMsg.includes('user name')) {
@@ -202,7 +194,6 @@ export async function registerRoutes(
         }
 
         const client = loginResult.client;
-        console.log("Login successful, fetching gradebook...");
 
         // Fetch gradebook and student info in parallel with timeout
         const [gradebook, studentInfo] = await Promise.all([
