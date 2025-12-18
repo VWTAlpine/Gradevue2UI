@@ -318,11 +318,18 @@ export default function LoginPage() {
                 Try Demo
               </Button>
 
-              <p className="mt-6 text-center text-xs text-muted-foreground">
-                <Lock className="mr-1 inline-block h-3 w-3" />
-                Your credentials are securely encrypted and transmitted directly to
-                StudentVue
-              </p>
+              <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
+                <p>
+                  <Lock className="mr-1 inline-block h-3 w-3" />
+                  Your credentials are securely encrypted and transmitted directly to
+                  StudentVue
+                </p>
+                <p className="text-muted-foreground/70">
+                  GradeVue is an independent project and is not affiliated with StudentVue or Edupoint.
+                  This app accesses your data through StudentVue's public API for personal, educational use only.
+                  By using this app, you agree to use it responsibly and in accordance with your school's policies.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

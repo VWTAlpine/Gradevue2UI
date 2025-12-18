@@ -299,7 +299,7 @@ export default function DocumentsPage() {
                 <TabsList className="h-auto flex-wrap gap-2 bg-transparent p-0">
                   <TabsTrigger
                     value="all"
-                    className="rounded-full px-4 py-2 data-[state=active]:bg-muted data-[state=active]:shadow-sm"
+                    className="rounded-full px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                     data-testid="tab-all-documents"
                   >
                     All
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                     <TabsTrigger
                       key={type}
                       value={type}
-                      className="rounded-full px-4 py-2 data-[state=active]:bg-muted data-[state=active]:shadow-sm"
+                      className="rounded-full px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                       data-testid={`tab-${type.replace(/\s+/g, "-").toLowerCase()}`}
                     >
                       {type}

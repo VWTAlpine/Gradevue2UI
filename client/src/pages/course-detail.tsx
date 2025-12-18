@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGrades } from "@/lib/gradeContext";
+import { useGrades, type HypotheticalAssignment } from "@/lib/gradeContext";
 import { AssignmentRow } from "@/components/assignment-row";
 import { CategoryBreakdownCompact } from "@/components/category-breakdown";
 import { AlertTriangle } from "lucide-react";
@@ -59,6 +59,7 @@ export default function CourseDetailPage() {
     addHypotheticalAssignment,
     removeHypotheticalAssignment,
     clearAllOverrides,
+    updateAssignmentScore,
   } = useGrades();
 
   const [chartType, setChartType] = useState<"bar" | "line">("line");
@@ -832,7 +833,14 @@ export default function CourseDetailPage() {
         <CardContent className="space-y-2">
           {course.assignments && course.assignments.length > 0 ? (
             course.assignments.map((assignment, aIndex) => (
-              <AssignmentRow key={aIndex} assignment={assignment} index={aIndex} />
+              <AssignmentRow 
+                key={aIndex} 
+                assignment={assignment} 
+                index={aIndex}
+                courseId={course.id}
+                editable={hypotheticalMode}
+                onScoreChange={hypotheticalMode ? (earned, possible) => updateAssignmentScore(course.id, aIndex, earned, possible) : undefined}
+              />
             ))
           ) : (
             <div className="py-6 text-center">
