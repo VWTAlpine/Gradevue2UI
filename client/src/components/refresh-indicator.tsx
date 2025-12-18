@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { useGrades } from "@/lib/gradeContext";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 function formatTimeAgo(date: Date): string {
   const now = new Date();
@@ -29,13 +28,8 @@ function formatTimeAgo(date: Date): string {
 }
 
 export function RefreshIndicator() {
-  const { lastUpdated, refreshGrades, isLoading, credentials, gradebook } = useGrades();
+  const { lastUpdated, refreshGrades, isLoading, credentials } = useGrades();
   const [timeAgo, setTimeAgo] = useState<string>("");
-
-  const studentInfo = gradebook?.studentInfo;
-  const initials = studentInfo?.name
-    ? studentInfo.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-    : "ST";
 
   useEffect(() => {
     if (!lastUpdated) return;
@@ -59,12 +53,7 @@ export function RefreshIndicator() {
       className="flex items-center gap-2"
       data-testid="refresh-indicator"
     >
-      <Avatar className="h-7 w-7">
-        <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      <span className="text-sm text-muted-foreground hidden sm:inline">
+      <span className="text-sm text-muted-foreground">
         Last updated {timeAgo}
       </span>
       <button
