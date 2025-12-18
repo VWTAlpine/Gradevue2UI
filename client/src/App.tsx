@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RefreshIndicator } from "@/components/refresh-indicator";
 import { GradeProvider, useGrades } from "@/lib/gradeContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { Footer } from "@/components/footer";
@@ -39,6 +40,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
           </header>
           <main className="flex-1 overflow-auto p-6">{children}</main>
+          <RefreshIndicator />
           <Footer />
         </div>
       </div>

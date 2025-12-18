@@ -52,6 +52,8 @@ interface GradeContextType {
   addHypotheticalAssignment: (courseId: string, assignment: HypotheticalAssignment) => void;
   removeHypotheticalAssignment: (courseId: string, assignmentId: string) => void;
   clearAllOverrides: () => void;
+  lastUpdated: Date | null;
+  refreshGrades: () => Promise<void>;
 }
 
 const GradeContext = createContext<GradeContextType | undefined>(undefined);
@@ -64,6 +66,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
   const [hypotheticalMode, setHypotheticalMode] = useState(false);
   const [gradeChanges, setGradeChanges] = useState<GradeChange[]>([]);
   const [courseOverrides, setCourseOverrides] = useState<Map<string, CourseOverrides>>(new Map());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const isLoggedIn = gradebook !== null;
 
@@ -263,6 +266,33 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       }
     }
     setGradebookState(newGradebook);
+    if (newGradebook) {
+      setLastUpdated(new Date());
+    }
+  };
+
+  const refreshGrades = async () => {
+    if (!credentials || credentials.district === "demo") {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/studentvue/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setGradebook(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to refresh grades:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const clearGradeChanges = () => {
@@ -272,6 +302,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedGradebook = localStorage.getItem("gradebook");
     const savedCredentials = localStorage.getItem("credentials");
+    const savedLastUpdated = localStorage.getItem("lastUpdated");
     
     if (savedGradebook) {
       try {
@@ -288,6 +319,14 @@ export function GradeProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("credentials");
       }
     }
+
+    if (savedLastUpdated) {
+      try {
+        setLastUpdated(new Date(savedLastUpdated));
+      } catch (e) {
+        localStorage.removeItem("lastUpdated");
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -297,6 +336,14 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("gradebook");
     }
   }, [gradebook]);
+
+  useEffect(() => {
+    if (lastUpdated) {
+      localStorage.setItem("lastUpdated", lastUpdated.toISOString());
+    } else {
+      localStorage.removeItem("lastUpdated");
+    }
+  }, [lastUpdated]);
 
   useEffect(() => {
     if (credentials) {
@@ -337,6 +384,8 @@ export function GradeProvider({ children }: { children: ReactNode }) {
         addHypotheticalAssignment,
         removeHypotheticalAssignment,
         clearAllOverrides,
+        lastUpdated,
+        refreshGrades,
       }}
     >
       {children}

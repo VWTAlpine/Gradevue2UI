@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,8 @@ import { useTheme, presetThemes } from "@/lib/themeContext";
 import { useGrades } from "@/lib/gradeContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText, Check, Pencil } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText, Check, Pencil, Smartphone, MessageSquare, Mail } from "lucide-react";
+import { SiGithub } from "react-icons/si";
 
 type ColorTheme = "blue" | "green" | "purple" | "orange" | "rose" | "custom1" | "custom2" | "custom3";
 
@@ -20,6 +21,11 @@ const presetColors: { id: ColorTheme; color: string; name: string }[] = [
   { id: "rose", color: "hsl(346 77% 50%)", name: "Rose" },
 ];
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 export default function SettingsPage() {
   const { theme, setTheme, colorTheme, setColorTheme, customColors, setCustomColor } = useTheme();
   const { logout, credentials, setIsLoading, setGradebook, setCredentials, gradebook } = useGrades();
@@ -27,6 +33,49 @@ export default function SettingsPage() {
   const [editingCustom, setEditingCustom] = useState<"custom1" | "custom2" | "custom3" | null>(null);
   const [customHue, setCustomHue] = useState("217");
   const [customName, setCustomName] = useState("");
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setCanInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) {
+      toast({
+        title: "Installation Not Available",
+        description: "Your browser doesn't support app installation, or the app is already installed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === "accepted") {
+        toast({
+          title: "App Installed",
+          description: "GradeVue has been installed to your device",
+        });
+        setCanInstall(false);
+        setDeferredPrompt(null);
+      }
+    } catch (error) {
+      console.error("PWA install error:", error);
+    }
+  };
 
   const handleRefresh = async () => {
     if (!credentials || credentials.district === "demo") {
@@ -520,6 +569,83 @@ export default function SettingsPage() {
                 Export
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-visible">
+          <CardHeader className="flex flex-row items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/30">
+              <Smartphone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <div>
+              <CardTitle>Install App</CardTitle>
+              <CardDescription>
+                Install GradeVue as a web app on your device
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Install as Web App</p>
+                <p className="text-sm text-muted-foreground">
+                  Add GradeVue to your home screen for quick access
+                </p>
+              </div>
+              <Button 
+                onClick={handleInstallPWA} 
+                variant="outline" 
+                disabled={!canInstall}
+                data-testid="button-install-pwa"
+              >
+                <Smartphone className="mr-2 h-4 w-4" />
+                Install
+              </Button>
+            </div>
+            {!canInstall && (
+              <p className="text-xs text-muted-foreground">
+                App installation is available when using a supported browser. If you've already installed the app, this option won't appear.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-visible">
+          <CardHeader className="flex flex-row items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+              <MessageSquare className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <CardTitle>Feedback</CardTitle>
+              <CardDescription>
+                Help improve GradeVue by reporting issues or suggestions
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-muted/50 p-4 mb-4">
+              <p className="text-sm text-muted-foreground">
+                Found a bug or have a feature request? Create an issue on GitHub to let us know. You can also reach out via email for any questions or feedback.
+              </p>
+            </div>
+            <a
+              href="https://github.com/VWTAlpine/Gradevue2UI/issues/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 w-full rounded-lg border p-4 hover-elevate transition-colors"
+              data-testid="link-github-issue"
+            >
+              <SiGithub className="h-5 w-5" />
+              <span className="font-medium">Create an issue on GitHub</span>
+            </a>
+            <a
+              href="mailto:javanon@proton.me"
+              className="flex items-center gap-3 w-full rounded-lg border p-4 hover-elevate transition-colors"
+              data-testid="link-email-feedback"
+            >
+              <Mail className="h-5 w-5" />
+              <span className="font-medium">Send an email</span>
+            </a>
           </CardContent>
         </Card>
 
