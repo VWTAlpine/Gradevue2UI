@@ -296,13 +296,18 @@ export async function registerRoutes(
         for (const absence of absences) {
           const reason = absence.reason || "";
           const reasonLower = reason.toLowerCase();
+          const description = absence.description || absence.reasonDescription || reason || "";
           
-          // Determine status based on reason
+          // Determine status based on reason using attendance code logic
           let status = "Absent";
-          if (reasonLower.includes("tardy") || reasonLower.includes("late")) {
+          if (reasonLower.includes("tdy") || reasonLower.includes("tardy") || 
+              reasonLower === "t" || reasonLower.includes("late") ||
+              reasonLower.includes("clstdy")) {
             status = "Tardy";
             totalTardies++;
-          } else if (reasonLower.includes("excused") || reasonLower.includes("field trip") || reasonLower.includes("doctor")) {
+          } else if (reasonLower.includes("exc") || reasonLower === "e" ||
+                     reasonLower.includes("field") || reasonLower.includes("doctor") ||
+                     reasonLower.includes("illness") || reasonLower.includes("medical")) {
             status = "Excused";
             totalExcused++;
             totalAbsences++;
@@ -318,8 +323,9 @@ export async function registerRoutes(
               date: absence.date || "",
               period: period,
               course: absence.note || "",
-              status: status,
+              status: reason || status,
               reason: reason,
+              description: description,
             });
           }
         }
@@ -380,34 +386,25 @@ export async function registerRoutes(
 
       try {
         const documentsData = await loginResult.client.documents();
-        console.log("Server raw documents data:", JSON.stringify(documentsData, null, 2));
         const documents: any[] = [];
 
         const docList = documentsData || [];
         for (const doc of docList) {
-          console.log("Server document entry:", JSON.stringify(doc, null, 2));
+          // The studentvue npm package returns document objects with a document property
+          const docObj = doc.document || doc;
           
-          // Try multiple possible field names based on studentvue npm package structure
+          // comment/name contains the actual title
           const docName = 
-            doc.document?.name || doc.name ||
-            doc.document?.comment || doc.comment ||
-            doc.document?.title || doc.title ||
-            doc.document?.fileName || doc.fileName ||
+            docObj.comment || docObj.name ||
+            docObj.title || docObj.fileName ||
             "Unknown Document";
           
-          const docDate =
-            doc.document?.date || doc.date ||
-            "";
+          const docDate = docObj.date || "";
           
-          const docType =
-            doc.document?.type || doc.type ||
-            doc.document?.category || doc.category ||
-            "Document";
+          const docType = docObj.type || docObj.category || "Document";
           
-          const docGU =
-            doc.document?.documentGU || doc.documentGU ||
-            doc.document?.file?.documentGU || doc.file?.documentGU ||
-            "";
+          // Get the document file GU for downloading
+          const docGU = docObj.file?.documentGU || docObj.documentGU || "";
           
           documents.push({
             name: docName,

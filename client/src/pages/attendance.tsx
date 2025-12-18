@@ -558,11 +558,18 @@ export default function AttendancePage() {
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="border-t border-border bg-muted/30 px-6 py-4 space-y-2">
+                      <div className="border-t border-border bg-muted/30 px-6 py-4 space-y-3">
                         {group.records.map((record, rIndex) => (
-                          <p key={rIndex} className="text-sm text-foreground">
-                            {record.course || "Unknown Course"}: {record.status}
-                          </p>
+                          <div key={rIndex} className="text-sm">
+                            <p className="text-foreground font-medium">
+                              {record.course || "Unknown Course"}: {record.status}
+                            </p>
+                            {record.description && record.description !== record.status && (
+                              <p className="text-muted-foreground text-xs mt-0.5">
+                                {record.description}
+                              </p>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </CollapsibleContent>

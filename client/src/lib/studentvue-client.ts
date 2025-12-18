@@ -176,6 +176,7 @@ export interface ParsedDocument {
   date: string;
   type: string;
   documentGU: string;
+  fileName?: string;
 }
 
 export interface ParsedDocuments {
@@ -186,9 +187,6 @@ export function parseDocuments(data: any): ParsedDocuments {
   const documents: ParsedDocument[] = [];
   
   try {
-    // Log raw data for debugging
-    console.log("Raw documents data:", JSON.stringify(data, null, 2));
-    
     // Try multiple possible paths for document data
     const studentDocuments = 
       data?.StudentDocumentDatas?.StudentDocumentData ||
@@ -198,45 +196,35 @@ export function parseDocuments(data: any): ParsedDocuments {
       [];
     const docList = Array.isArray(studentDocuments) ? studentDocuments : (studentDocuments ? [studentDocuments] : []);
     
-    console.log("Document list:", docList);
-    
     for (const doc of docList) {
       if (!doc) continue;
       
-      // Log individual doc to see field names
-      console.log("Document entry:", doc);
-      
-      // Try multiple possible field names for document name/comment
+      // _DocumentComment contains the actual title (e.g., "Report Card With Attendance Detail", "Progress Report 1")
       const docName = 
-        doc._DocumentName || doc.DocumentName ||
         doc._DocumentComment || doc.DocumentComment ||
+        doc._DocumentName || doc.DocumentName ||
         doc._Comment || doc.Comment ||
         doc._Name || doc.Name ||
-        doc._FileName || doc.FileName ||
-        doc._Title || doc.Title ||
-        doc._Description || doc.Description ||
         "Unknown Document";
       
-      // Try multiple possible field names for date
       const docDate =
         doc._DocumentDate || doc.DocumentDate ||
         doc._Date || doc.Date ||
-        doc._DateEntered || doc.DateEntered ||
         "";
       
-      // Try multiple possible field names for type
       const docType =
         doc._DocumentType || doc.DocumentType ||
         doc._Type || doc.Type ||
-        doc._Category || doc.Category ||
         "Document";
       
-      // Try multiple possible field names for document ID
       const docGU =
         doc._DocumentGU || doc.DocumentGU ||
         doc._GU || doc.GU ||
-        doc._DocumentID || doc.DocumentID ||
-        doc._ID || doc.ID ||
+        "";
+      
+      const docFileName =
+        doc._DocumentFileName || doc.DocumentFileName ||
+        doc._FileName || doc.FileName ||
         "";
       
       documents.push({
@@ -244,6 +232,7 @@ export function parseDocuments(data: any): ParsedDocuments {
         date: docDate,
         type: docType,
         documentGU: docGU,
+        fileName: docFileName,
       });
     }
   } catch (e) {
@@ -267,6 +256,7 @@ export interface ParsedAttendanceRecord {
   course: string;
   status: string;
   reason: string;
+  description: string;
 }
 
 // Parse attendance code to determine type
@@ -308,19 +298,29 @@ export function parseAttendance(attendance: any): ParsedAttendance {
   let totalUnexcused = 0;
 
   try {
+    // Log raw attendance data for debugging
+    console.log("Raw attendance data:", JSON.stringify(attendance, null, 2));
+    
     // Try SOAP response format first (from client-side)
     const absences = attendance?.Absences?.Absence || attendance?.absences || [];
     const absenceList = Array.isArray(absences) ? absences : (absences ? [absences] : []);
 
     for (const absence of absenceList) {
       if (!absence) continue;
+      
+      // Log individual absence record
+      console.log("Absence record:", JSON.stringify(absence, null, 2));
 
       const dateVal = absence._AbsenceDate || absence.date || "";
       const reason = absence._Reason || absence.reason || "";
       const note = absence._Note || absence.note || "";
       
+      // Description/Reason text
+      const description = absence._ReasonDescription || absence.reasonDescription || 
+                          absence._Description || absence.description || 
+                          reason || "";
+      
       // Get period activities - this contains per-period attendance codes
-      // Format: "Period: CourseName: AttendanceCode, Period: CourseName: AttendanceCode"
       const periodActivities = absence._PeriodActivities || absence.periodActivities || [];
       const dailyIconType = absence._DailyIconType || absence.dailyIconType || "";
       
@@ -353,6 +353,7 @@ export function parseAttendance(attendance: any): ParsedAttendance {
             course: courseName,
             status: activityCode || status,
             reason: reason,
+            description: description,
           });
         }
       } else {
@@ -383,6 +384,7 @@ export function parseAttendance(attendance: any): ParsedAttendance {
             course: note,
             status: statusCode || status,
             reason: reason,
+            description: description,
           });
         } else {
           for (const period of periodList) {
@@ -392,6 +394,7 @@ export function parseAttendance(attendance: any): ParsedAttendance {
               course: note,
               status: statusCode || status,
               reason: reason,
+              description: description,
             });
           }
         }
