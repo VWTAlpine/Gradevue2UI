@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@shared/schema";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
-import { ChevronRight, AlertTriangle } from "lucide-react";
+import { ChevronRight, AlertTriangle, MapPin } from "lucide-react";
 
 interface GradeCardProps {
   course: Course;
@@ -56,7 +56,12 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
         <div className="text-sm text-muted-foreground">
           <p>{course.teacher || "Teacher"}</p>
           <p>Period {course.period || "N/A"}</p>
-          {course.room && <p>Room {course.room}</p>}
+          {course.room && (
+            <p className="flex items-center gap-1 text-xs">
+              <MapPin className="h-3 w-3" />
+              Room {course.room}
+            </p>
+          )}
         </div>
 
         <div className="flex items-baseline justify-between gap-2 pt-2">
