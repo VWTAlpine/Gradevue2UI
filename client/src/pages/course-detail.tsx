@@ -352,6 +352,11 @@ export default function CourseDetailPage() {
       });
     }
     
+    // Adjust the last point to match the current course grade for consistency
+    if (result.length > 0 && course.grade !== undefined && course.grade !== null) {
+      result[result.length - 1].score = Math.round(course.grade * 10) / 10;
+    }
+    
     return result;
   }, [course]);
 
