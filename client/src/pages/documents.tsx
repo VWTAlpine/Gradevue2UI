@@ -79,8 +79,39 @@ export default function DocumentsPage() {
       return blobUrlCache.current.get(documentGU)!;
     }
 
+    // Helper function to convert base64 to blob URL
+    const base64ToBlobUrl = (base64: string): string => {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      return URL.createObjectURL(blob);
+    };
+
+    // Try client-side first (like GradeVue) - faster and no re-authentication needed
     try {
-      // Use server-side endpoint for document content (more reliable than client-side CORS)
+      const client = new StudentVueClient(
+        credentials.district,
+        credentials.username,
+        credentials.password
+      );
+      await client.checkLogin();
+      const docContent = await client.getDocumentContent(documentGU);
+      
+      if (docContent && docContent.base64Code) {
+        const blobUrl = base64ToBlobUrl(docContent.base64Code);
+        blobUrlCache.current.set(documentGU, blobUrl);
+        return blobUrl;
+      }
+    } catch (clientErr) {
+      console.log("Client-side document fetch failed, trying server:", clientErr);
+    }
+
+    // Fallback to server-side endpoint
+    try {
       const res = await fetch(`/api/studentvue/document/${encodeURIComponent(documentGU)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,17 +121,7 @@ export default function DocumentsPage() {
       const response = await res.json();
       
       if (response.success && response.data && response.data.base64) {
-        // Convert base64 to blob URL
-        const byteCharacters = atob(response.data.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "application/pdf" });
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // Cache the URL
+        const blobUrl = base64ToBlobUrl(response.data.base64);
         blobUrlCache.current.set(documentGU, blobUrl);
         return blobUrl;
       }
