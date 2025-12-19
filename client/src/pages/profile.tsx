@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Mail, Phone, School, Calendar, BookOpen } from "lucide-react";
+import { percentageToGpaPoints } from "@shared/schema";
 
 export default function ProfilePage() {
   const { gradebook } = useGrades();
@@ -29,19 +30,7 @@ export default function ProfilePage() {
     
     let totalPoints = 0;
     validGrades.forEach(course => {
-      const grade = course.grade ?? 0;
-      if (grade >= 93) totalPoints += 4.0;
-      else if (grade >= 90) totalPoints += 3.7;
-      else if (grade >= 87) totalPoints += 3.3;
-      else if (grade >= 83) totalPoints += 3.0;
-      else if (grade >= 80) totalPoints += 2.7;
-      else if (grade >= 77) totalPoints += 2.3;
-      else if (grade >= 73) totalPoints += 2.0;
-      else if (grade >= 70) totalPoints += 1.7;
-      else if (grade >= 67) totalPoints += 1.3;
-      else if (grade >= 63) totalPoints += 1.0;
-      else if (grade >= 60) totalPoints += 0.7;
-      else totalPoints += 0.0;
+      totalPoints += percentageToGpaPoints(course.grade);
     });
     
     return (totalPoints / validGrades.length).toFixed(2);
