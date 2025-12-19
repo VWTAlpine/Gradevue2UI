@@ -128,20 +128,20 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-// Grade utilities - uses 0.5 rounding thresholds for letter grades
+// Grade utilities
 export function getLetterGrade(percentage: number | null): string {
   if (percentage === null) return "N/A";
-  if (percentage >= 92.5) return "A";
-  if (percentage >= 89.5) return "A-";
-  if (percentage >= 86.5) return "B+";
-  if (percentage >= 82.5) return "B";
-  if (percentage >= 79.5) return "B-";
-  if (percentage >= 76.5) return "C+";
-  if (percentage >= 72.5) return "C";
-  if (percentage >= 69.5) return "C-";
-  if (percentage >= 66.5) return "D+";
-  if (percentage >= 62.5) return "D";
-  if (percentage >= 59.5) return "D-";
+  if (percentage >= 93) return "A";
+  if (percentage >= 90) return "A-";
+  if (percentage >= 87) return "B+";
+  if (percentage >= 83) return "B";
+  if (percentage >= 80) return "B-";
+  if (percentage >= 77) return "C+";
+  if (percentage >= 73) return "C";
+  if (percentage >= 70) return "C-";
+  if (percentage >= 67) return "D+";
+  if (percentage >= 63) return "D";
+  if (percentage >= 60) return "D-";
   return "F";
 }
 
@@ -243,12 +243,6 @@ export function letterGradeToPoints(letterGrade: string): number {
     default:
       return 0.0;
   }
-}
-
-// Convert percentage grade to GPA points (uses 0.5 rounding thresholds)
-export function percentageToGpaPoints(percentage: number | null): number {
-  const letterGrade = getLetterGrade(percentage);
-  return letterGradeToPoints(letterGrade);
 }
 
 // Users table (keeping for compatibility)

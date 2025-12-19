@@ -592,35 +592,6 @@ export function parseGradebook(gradebook: any, studentInfo: any = null): ParsedG
         if (letterGrade === "N/A" && mark._ScoreString) {
           letterGrade = mark._ScoreString;
         }
-        
-        // If grade is a whole number, try to calculate more precise grade from category weights
-        if (gradeValue !== null && Number.isInteger(gradeValue)) {
-          const rawCategories = mark?.GradeCalculationSummary?.AssignmentGradeCalc || [];
-          const categoryList = Array.isArray(rawCategories) ? rawCategories : [rawCategories];
-          
-          if (categoryList.length > 0) {
-            let totalWeight = 0;
-            let weightedSum = 0;
-            
-            for (const cat of categoryList) {
-              if (!cat) continue;
-              const weight = parseFloat(cat._Weight) || 0;
-              const score = parseFloat(cat._CalculatedMark) || 0;
-              if (weight > 0 && score > 0) {
-                totalWeight += weight;
-                weightedSum += (score * weight);
-              }
-            }
-            
-            if (totalWeight > 0) {
-              const calculatedGrade = weightedSum / totalWeight;
-              // Only use calculated grade if it's close to the reported grade (within 1 point)
-              if (Math.abs(calculatedGrade - gradeValue) < 1.5) {
-                gradeValue = calculatedGrade;
-              }
-            }
-          }
-        }
       }
       
       const assignments: ParsedAssignment[] = [];

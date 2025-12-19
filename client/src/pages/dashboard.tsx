@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { percentageToGpaPoints } from "@shared/schema";
 
 interface AttendanceSummary {
   totalAbsences: number;
@@ -81,7 +80,19 @@ export default function DashboardPage() {
 
     let totalPoints = 0;
     validGrades.forEach((course) => {
-      totalPoints += percentageToGpaPoints(course.grade);
+      const grade = course.grade ?? 0;
+      if (grade >= 93) totalPoints += 4.0;
+      else if (grade >= 90) totalPoints += 3.7;
+      else if (grade >= 87) totalPoints += 3.3;
+      else if (grade >= 83) totalPoints += 3.0;
+      else if (grade >= 80) totalPoints += 2.7;
+      else if (grade >= 77) totalPoints += 2.3;
+      else if (grade >= 73) totalPoints += 2.0;
+      else if (grade >= 70) totalPoints += 1.7;
+      else if (grade >= 67) totalPoints += 1.3;
+      else if (grade >= 63) totalPoints += 1.0;
+      else if (grade >= 60) totalPoints += 0.7;
+      else totalPoints += 0.0;
     });
 
     return totalPoints / validGrades.length;
