@@ -62,6 +62,32 @@ export default function CourseDetailPage() {
     updateAssignmentScore,
   } = useGrades();
 
+  const getOriginalAssignment = (assignmentIndex: number) => {
+    if (!courseId || !gradebook?.courses) return null;
+    const idx = parseInt(courseId);
+    const originalCourse = gradebook.courses[idx];
+    if (!originalCourse || !originalCourse.assignments[assignmentIndex]) return null;
+    const a = originalCourse.assignments[assignmentIndex];
+    if (a.pointsEarned !== null && a.pointsEarned !== undefined &&
+        a.pointsPossible !== null && a.pointsPossible !== undefined) {
+      return { earned: a.pointsEarned, possible: a.pointsPossible };
+    }
+    if (a.score) {
+      const match = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
+      if (match) {
+        return { earned: parseFloat(match[1]), possible: parseFloat(match[2]) };
+      }
+    }
+    return null;
+  };
+
+  const isAssignmentOverridden = (assignmentIndex: number): boolean => {
+    if (!course) return false;
+    const overrides = courseOverrides.get(course.id);
+    if (!overrides) return false;
+    return overrides.modifiedAssignments.some(m => m.assignmentIndex === assignmentIndex);
+  };
+
   const [chartType, setChartType] = useState<"bar" | "line">("line");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
@@ -834,16 +860,22 @@ export default function CourseDetailPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {course.assignments && course.assignments.length > 0 ? (
-            course.assignments.map((assignment, aIndex) => (
-              <AssignmentRow 
-                key={aIndex} 
-                assignment={assignment} 
-                index={aIndex}
-                courseId={course.id}
-                editable={hypotheticalMode}
-                onScoreChange={hypotheticalMode ? (earned, possible) => updateAssignmentScore(course.id, aIndex, earned, possible) : undefined}
-              />
-            ))
+            course.assignments.map((assignment, aIndex) => {
+              const isOverridden = hypotheticalMode && isAssignmentOverridden(aIndex);
+              const originalScore = isOverridden ? getOriginalAssignment(aIndex) : null;
+              return (
+                <AssignmentRow 
+                  key={aIndex} 
+                  assignment={assignment} 
+                  index={aIndex}
+                  courseId={course.id}
+                  editable={hypotheticalMode}
+                  onScoreChange={hypotheticalMode ? (earned, possible) => updateAssignmentScore(course.id, aIndex, earned, possible) : undefined}
+                  isOverridden={isOverridden}
+                  originalScore={originalScore}
+                />
+              );
+            })
           ) : (
             <div className="py-6 text-center">
               <FileText className="mx-auto h-10 w-10 text-muted-foreground" />

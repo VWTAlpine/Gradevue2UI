@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { useGrades } from "@/lib/gradeContext";
+import { Button } from "@/components/ui/button";
 
 function formatTimeAgo(date: Date): string {
   const now = new Date();
@@ -50,23 +51,24 @@ export function RefreshIndicator() {
 
   return (
     <div 
-      className="flex items-center gap-2"
+      className="flex items-center gap-3"
       data-testid="refresh-indicator"
     >
-      <span className="text-sm text-muted-foreground">
-        Last updated {timeAgo}
+      <span className="text-sm text-muted-foreground hidden sm:inline">
+        Updated {timeAgo}
       </span>
-      <button
-        className="text-sm font-medium text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={refreshGrades}
         disabled={isLoading}
+        className="gap-2"
         data-testid="button-refresh-indicator"
+        aria-label="Refresh grades"
       >
-        {isLoading ? (
-          <RefreshCw className="h-3 w-3 animate-spin" />
-        ) : null}
-        Refresh
-      </button>
+        <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+        <span className="hidden sm:inline">Refresh</span>
+      </Button>
     </div>
   );
 }

@@ -14,6 +14,8 @@ interface AssignmentRowProps {
   courseId?: string;
   editable?: boolean;
   onScoreChange?: (pointsEarned: number, pointsPossible: number) => void;
+  isOverridden?: boolean;
+  originalScore?: { earned: number; possible: number } | null;
 }
 
 export function AssignmentRow({ 
@@ -24,6 +26,8 @@ export function AssignmentRow({
   courseId,
   editable = false,
   onScoreChange,
+  isOverridden = false,
+  originalScore = null,
 }: AssignmentRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editEarned, setEditEarned] = useState("");
@@ -148,9 +152,19 @@ export function AssignmentRow({
 
   const isHypothetical = (assignment as any).isHypothetical === true;
 
+  const getOverrideClasses = () => {
+    if (isOverridden) {
+      return "border-amber-400 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-900/10";
+    }
+    if (isHypothetical) {
+      return "border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-900/10";
+    }
+    return "bg-card";
+  };
+
   return (
     <div 
-      className={`flex items-center justify-between gap-4 rounded-lg border bg-card p-4 ${editable ? "hover-elevate" : ""}`} 
+      className={`flex items-center justify-between gap-4 rounded-lg border p-4 ${getOverrideClasses()} ${editable ? "hover-elevate" : ""}`} 
       data-testid={`assignment-row-${index}`}
     >
       <div className="min-w-0 flex-1 space-y-1">
@@ -160,6 +174,11 @@ export function AssignmentRow({
           </h4>
           {isHypothetical && (
             <FlaskConical className="h-3.5 w-3.5 text-purple-500" />
+          )}
+          {isOverridden && !isHypothetical && (
+            <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:text-amber-400">
+              Modified
+            </Badge>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -216,6 +235,11 @@ export function AssignmentRow({
               <div>
                 <p className="text-lg font-bold" data-testid={`assignment-points-${index}`}>
                   {earned}/{max}
+                  {isOverridden && originalScore && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground line-through">
+                      {originalScore.earned}/{originalScore.possible}
+                    </span>
+                  )}
                 </p>
                 <p className={`text-sm font-medium ${getGradeColor(letterGrade)}`} data-testid={`assignment-percentage-${index}`}>
                   {percentage?.toFixed(1)}%

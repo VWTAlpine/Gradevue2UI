@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RefreshIndicator } from "@/components/refresh-indicator";
+import { PWAInstallButton } from "@/components/pwa-install-button";
 import { GradeProvider, useGrades } from "@/lib/gradeContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { Footer } from "@/components/footer";
@@ -35,11 +36,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center border-b px-4">
+          <header className="flex h-14 shrink-0 items-center border-b px-4 gap-2">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex-1 flex justify-center">
               <RefreshIndicator />
             </div>
+            <PWAInstallButton />
             <ThemeToggle />
           </header>
           <main className="flex-1 overflow-auto p-6">{children}</main>
