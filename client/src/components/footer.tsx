@@ -4,7 +4,7 @@ export function Footer() {
       <p>
         Developed by Victor T and the GradeVue 2 Team. 
         <span className="mx-1">|</span>
-        2025 Connor Rakov. 
+        2025 Victor Tang. 
         <span className="mx-1">|</span>
         Licensed under the{" "}
         <a 
