@@ -74,3 +74,7 @@ Preferred communication style: Simple, everyday language.
 - `drizzle-orm` + `drizzle-zod`: Database ORM with Zod schema integration
 - Radix UI primitives: Accessible component foundations
 - `tailwindcss`: Utility-first CSS framework
+
+## License
+This project is proprietary software. 2026 Victor Tang. All Rights Reserved.
+Forking, redistribution, or reuse without permission is prohibited.

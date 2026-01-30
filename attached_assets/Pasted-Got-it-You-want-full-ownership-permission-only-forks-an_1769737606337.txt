@@ -1,0 +1,90 @@
+Got it. You want full ownership, permission-only forks, and freedom to monetize. That’s a clean, normal goal — and yes, there is a correct setup for this.
+
+Short answer first, then exact steps.
+
+TL;DR — What you want
+
+You want proprietary copyright with no implicit rights granted.
+
+That means:
+
+Default copyright (“All Rights Reserved”)
+NOT MIT, NOT GPL, NOT Creative Commons
+
+1. The correct legal posture (this matters)
+✅ Copyright you want
+
+You automatically own copyright the moment you write the code.
+
+You just need to assert it clearly.
+
+Use:
+All Rights Reserved / Proprietary License
+
+This means:
+
+❌ No copying
+
+❌ No forking
+
+❌ No redistribution
+
+❌ No commercial use
+
+❌ No modification
+unless you explicitly grant permission
+
+You can still sell licenses later.
+
+2. Exactly what to put in your repo (copy/paste)
+A. LICENSE file (do this first)
+
+Create a file called LICENSE with this exact text:
+
+Copyright (c) 2026 Your Name
+
+All Rights Reserved.
+
+This software and associated source code are the proprietary
+property of the copyright holder.
+
+No part of this software may be used, copied, modified, forked,
+distributed, or sublicensed without explicit written permission
+from the copyright holder.
+
+Unauthorized use is strictly prohibited.
+
+
+(Replace Your Name with your real name or legal entity.)
+
+B. Header in source files (strongly recommended)
+
+At the top of major files:
+
+© 2026 Your Name. All rights reserved.
+This source code is proprietary and confidential.
+Unauthorized copying or redistribution is prohibited.
+
+
+This shuts down “I didn’t know” arguments.
+
+3. Replit-specific steps (important)
+
+Replit does not override copyright, but its UX encourages open source.
+
+Do this:
+
+Make the repl private (this is huge)
+
+Remove any MIT / default license references
+
+Add the proprietary LICENSE
+
+Update README:
+
+## License
+This project is proprietary software.
+Forking, redistribution, or reuse without permission is prohibited.
+
+
+⚠️ If it remains public, people can still view it — and while that’s not permission to copy, it increases risk.

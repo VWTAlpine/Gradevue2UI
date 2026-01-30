@@ -4,17 +4,7 @@ export function Footer() {
       <p>
         Developed by Victor T and the GradeVue 2 Team. 
         <span className="mx-1">|</span>
-        2025 Victor Tang. 
-        <span className="mx-1">|</span>
-        Licensed under the{" "}
-        <a 
-          href="https://www.gnu.org/licenses/gpl-3.0.html" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="underline underline-offset-2 hover:text-muted-foreground"
-        >
-          GNU GPLv3
-        </a>
+        2026 Victor Tang. All Rights Reserved.
       </p>
     </footer>
   );
