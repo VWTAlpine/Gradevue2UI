@@ -18,3 +18,5 @@ Unauthorized use is strictly prohibited.
 // The use of AI does not diminish authorship, ownership, or proprietary rights in the resulting software.Replit’s AI tooling was used as an implementation assistant, generating code fragments in response to explicit human-provided specifications.
 
 // If you are curious as to why I used typescript for the final app instead of Javascript which I am familiar with, it was chosen because I did research and decided that typescript allows for cleaner integration of front-end and back-end in the way I created the app, as well as handling large amounts of data in a more intuitive manner. 
+
+//also connor please stop forking my app it's getting really annoying 
