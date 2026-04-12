@@ -1,3 +1,11 @@
+// GradeVue — StudentVue API client
+// Copyright (C) 2026 GradeVue Contributors
+// SOAP request structure and API integration based on work by Connor Rakov.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at your
+// option) any later version. See <https://www.gnu.org/licenses/>.
+
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 const alwaysArray = [

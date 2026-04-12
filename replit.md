@@ -80,5 +80,8 @@ Preferred communication style: Simple, everyday language.
 A detailed security review is documented in `SECURITY_REVIEW.md`. Key areas: credentials in sessionStorage, no server-side sessions, no rate limiting on login, XML injection risk in SOAP client.
 
 ## License
-This project is proprietary software. 2026 Victor Tang. All Rights Reserved.
-Forking, redistribution, or reuse without permission is prohibited.
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+© 2026 GradeVue Contributors. You are free to use, modify, and distribute this software
+under the terms of the GPL-3.0. See the `LICENSE` file at the project root for the full license text.
+
+**Credits:** SOAP request structure and StudentVue API integration based on work by Connor Rakov.

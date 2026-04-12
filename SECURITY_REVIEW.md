@@ -2,6 +2,7 @@
 
 **Date:** April 12, 2026
 **Last Updated:** April 12, 2026 (fixes applied)
+**License:** GNU General Public License v3.0 — © 2026 GradeVue Contributors
 **Scope:** Full application (client + server)
 
 ---
