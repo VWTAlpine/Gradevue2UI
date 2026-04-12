@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGrades } from "@/lib/gradeContext";
 import { getGradeBgColor } from "@shared/schema";
+import { calculateOverallGPA } from "@/lib/grade-utils";
 import {
   LayoutDashboard,
   FileText,
@@ -75,30 +76,7 @@ export function AppSidebar() {
   const { theme } = useTheme();
   const logoImage = theme === "dark" ? logoImageDark : logoImageLight;
 
-  const calculateOverallGPA = () => {
-    if (!gradebook?.courses) return "0.00";
-    const validGrades = gradebook.courses.filter(c => c.grade !== null);
-    if (validGrades.length === 0) return "0.00";
-    
-    let totalPoints = 0;
-    validGrades.forEach(course => {
-      const grade = course.grade ?? 0;
-      if (grade >= 93) totalPoints += 4.0;
-      else if (grade >= 90) totalPoints += 3.7;
-      else if (grade >= 87) totalPoints += 3.3;
-      else if (grade >= 83) totalPoints += 3.0;
-      else if (grade >= 80) totalPoints += 2.7;
-      else if (grade >= 77) totalPoints += 2.3;
-      else if (grade >= 73) totalPoints += 2.0;
-      else if (grade >= 70) totalPoints += 1.7;
-      else if (grade >= 67) totalPoints += 1.3;
-      else if (grade >= 63) totalPoints += 1.0;
-      else if (grade >= 60) totalPoints += 0.7;
-      else totalPoints += 0.0;
-    });
-    
-    return (totalPoints / validGrades.length).toFixed(2);
-  };
+  const gpaValue = calculateOverallGPA(gradebook?.courses || []).toFixed(2);
 
   const handleCourseClick = (course: NonNullable<typeof gradebook>["courses"][0]) => {
     setSelectedCourse(course);
@@ -162,7 +140,7 @@ export function AppSidebar() {
           <div className="flex items-center justify-center gap-2 py-1">
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">GPA:</span>
-            <span className="text-sm font-medium text-foreground">{calculateOverallGPA()}</span>
+            <span className="text-sm font-medium text-foreground">{gpaValue}</span>
           </div>
         </SidebarGroup>
         <SidebarGroup>

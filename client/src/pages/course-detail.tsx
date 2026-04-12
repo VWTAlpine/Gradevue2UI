@@ -3,7 +3,6 @@ import { useRoute, useLocation } from "wouter";
 import { useGrades, type HypotheticalAssignment } from "@/lib/gradeContext";
 import { AssignmentRow } from "@/components/assignment-row";
 import { CategoryBreakdownCompact } from "@/components/category-breakdown";
-import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getGradeBgColor, getGradeColor, getLetterGrade } from "@shared/schema";
-import { ArrowLeft, User, MapPin, FileText, BarChart3, LineChart, FlaskConical, Plus, X } from "lucide-react";
+import {
+  getAssignmentPoints,
+  isAssignmentMissing,
+  getGradeHexColor,
+} from "@/lib/grade-utils";
+import { AlertTriangle, ArrowLeft, User, MapPin, FileText, BarChart3, LineChart, FlaskConical, Plus, X } from "lucide-react";
 import { useState } from "react";
 import {
   BarChart,
@@ -166,161 +170,15 @@ export default function CourseDetailPage() {
     }));
   }, [computedCategories]);
 
-  // Helper to get earned points from any assignment format
-  const getEarnedPoints = (a: any): number | null => {
-    // Check numeric fields first
-    if (a.pointsEarned !== null && a.pointsEarned !== undefined) {
-      return a.pointsEarned;
-    }
-    
-    // Check score for "X out of Y" or "X/Y" format
-    if (a.score) {
-      const scoreMatch = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
-      if (scoreMatch) {
-        return parseFloat(scoreMatch[1]);
-      }
-      // Check for simple number or percentage
-      const simpleNumber = parseFloat(a.score);
-      if (!isNaN(simpleNumber)) {
-        return simpleNumber;
-      }
-    }
-    
-    // Check points field
-    if (a.points) {
-      const pointsMatch = a.points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
-      if (pointsMatch) {
-        return parseFloat(pointsMatch[1]);
-      }
-    }
-    
-    return null;
-  };
-
-  // Helper to check if an assignment is missing
-  const isAssignmentMissing = (a: any): boolean => {
-    const scoreLower = (a.score || "").toLowerCase();
-    const notesLower = (a.notes || "").toLowerCase();
-    
-    // Check for explicit "missing" text
-    if (scoreLower.includes("missing") || notesLower.includes("missing")) {
-      return true;
-    }
-    
-    // Check if past due with zero score
-    if (a.dueDate) {
-      const dueDate = new Date(a.dueDate);
-      const now = new Date();
-      if (dueDate < now) {
-        const earned = getEarnedPoints(a);
-        if (earned !== null && earned === 0) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
-
-  // Detect missing assignments
   const missingAssignments = useMemo(() => {
     if (!course?.assignments) return [];
     return course.assignments.filter(isAssignmentMissing);
   }, [course]);
 
-  // Same parseScore logic as AssignmentRow - handles all data formats
-  const getAssignmentPercentage = (a: any): number | null => {
-    // Check numeric fields first
-    if (a.pointsEarned !== null && a.pointsEarned !== undefined &&
-        a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0) {
-      return (a.pointsEarned / a.pointsPossible) * 100;
-    }
-    
-    const score = a.score;
-    const points = a.points;
-    
-    if (!score || score === "Not Graded" || score === "N/A") {
-      // Still try points field
-      if (points) {
-        const pointsMatch = points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
-        if (pointsMatch) {
-          const earned = parseFloat(pointsMatch[1]);
-          const max = parseFloat(pointsMatch[2]);
-          return max > 0 ? (earned / max) * 100 : null;
-        }
-      }
-      return null;
-    }
-
-    // Check score for "X out of Y" or "X/Y" format
-    const scoreMatch = score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
-    if (scoreMatch) {
-      const earned = parseFloat(scoreMatch[1]);
-      const max = parseFloat(scoreMatch[2]);
-      return max > 0 ? (earned / max) * 100 : null;
-    }
-
-    // Check points field for "X/Y" format
-    if (points) {
-      const pointsMatch = points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
-      if (pointsMatch) {
-        const earned = parseFloat(pointsMatch[1]);
-        const max = parseFloat(pointsMatch[2]);
-        return max > 0 ? (earned / max) * 100 : null;
-      }
-    }
-
-    // Try parsing score as a simple number (percentage)
-    const simpleNumber = parseFloat(score);
-    if (!isNaN(simpleNumber)) {
-      return simpleNumber;
-    }
-
-    return null;
-  };
-
-  // Helper to get earned and possible points from assignment
-  const getAssignmentPoints = (a: any): { earned: number; possible: number } | null => {
-    // First, get pointsPossible from assignment if available
-    const assignmentMax = (a.pointsPossible !== null && a.pointsPossible !== undefined && a.pointsPossible > 0)
-      ? a.pointsPossible
-      : null;
-    
-    if (a.pointsEarned !== null && a.pointsEarned !== undefined && assignmentMax !== null) {
-      return { earned: a.pointsEarned, possible: assignmentMax };
-    }
-    
-    if (a.score) {
-      const scoreMatch = a.score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
-      if (scoreMatch) {
-        return { earned: parseFloat(scoreMatch[1]), possible: parseFloat(scoreMatch[2]) };
-      }
-    }
-    
-    if (a.points) {
-      const pointsMatch = a.points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
-      if (pointsMatch) {
-        return { earned: parseFloat(pointsMatch[1]), possible: parseFloat(pointsMatch[2]) };
-      }
-    }
-    
-    // For simple percentage scores, use assignmentMax if available
-    if (a.score) {
-      const simpleNumber = parseFloat(a.score);
-      if (!isNaN(simpleNumber)) {
-        return { earned: simpleNumber, possible: assignmentMax ?? 100 };
-      }
-    }
-    
-    // If we have assignmentMax but couldn't parse earned, return null (let missing handler deal with it)
-    return null;
-  };
-
   // Calculate cumulative grade at each assignment point (including missing assignments)
   const gradeHistoryData = useMemo(() => {
     if (!course?.assignments) return [];
     
-    // Get all graded assignments AND missing assignments
     const gradedAssignments = course.assignments
       .map((a, originalIdx) => {
         const points = getAssignmentPoints(a);
@@ -594,31 +452,12 @@ export default function CourseDetailPage() {
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke={(() => {
-                        // Color the entire line based on current grade
-                        const currentGrade = course?.grade ?? 0;
-                        if (currentGrade >= 90) return "#10b981"; // emerald for A
-                        if (currentGrade >= 80) return "#3b82f6"; // blue for B
-                        if (currentGrade >= 70) return "#f59e0b"; // amber for C
-                        if (currentGrade >= 60) return "#f97316"; // orange for D
-                        return "#ef4444"; // red for F
-                      })()}
+                      stroke={getGradeHexColor(course?.grade ?? 0)}
                       strokeWidth={2}
                       dot={(props: any) => {
                         const { cx, cy, payload } = props;
                         const isMissing = payload?.isMissing;
-                        
-                        // Use current grade color for dots, red for missing
-                        const currentGrade = course?.grade ?? 0;
-                        const getGradeHexColor = (pct: number) => {
-                          if (pct >= 90) return "#10b981"; // emerald for A
-                          if (pct >= 80) return "#3b82f6"; // blue for B
-                          if (pct >= 70) return "#f59e0b"; // amber for C
-                          if (pct >= 60) return "#f97316"; // orange for D
-                          return "#ef4444"; // red for F
-                        };
-                        
-                        const dotColor = isMissing ? "#ef4444" : getGradeHexColor(currentGrade);
+                        const dotColor = isMissing ? "#ef4444" : getGradeHexColor(course?.grade ?? 0);
                         
                         return (
                           <circle

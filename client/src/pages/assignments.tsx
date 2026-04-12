@@ -20,6 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
+import { getBarColorFromLetter } from "@/lib/grade-utils";
 import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X } from "lucide-react";
 import {
   Select,
@@ -91,23 +92,6 @@ export default function AssignmentsPage() {
     }));
   }, [courses]);
 
-  const getBarColor = (letterGrade: string) => {
-    const grade = letterGrade.charAt(0).toUpperCase();
-    switch (grade) {
-      case "A":
-        return "#10b981";
-      case "B":
-        return "#3b82f6";
-      case "C":
-        return "#f59e0b";
-      case "D":
-        return "#f97316";
-      case "F":
-        return "#ef4444";
-      default:
-        return "#6b7280";
-    }
-  };
 
   const handleAddAssignment = (courseId: string) => {
     if (!newAssignment.pointsEarned || !newAssignment.pointsPossible) return;
@@ -458,7 +442,7 @@ export default function AssignmentsPage() {
                     {chartData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={getBarColor(entry.letterGrade)}
+                        fill={getBarColorFromLetter(entry.letterGrade)}
                       />
                     ))}
                   </Bar>

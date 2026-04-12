@@ -29,6 +29,7 @@ Preferred communication style: Simple, everyday language.
 - **Provider Pattern**: Used extensively for context (GradeProvider, ThemeProvider, SidebarProvider)
 - **Protected Routes**: Authentication check before rendering authenticated pages
 - **Component Composition**: Reusable UI components (StatCard, GradeCard, AssignmentRow) for consistent layouts
+- **Shared Utilities**: `client/src/lib/grade-utils.ts` centralizes GPA calculation, score parsing, missing assignment detection, and grade color mapping — used across dashboard, sidebar, assignment-row, course-detail, and grade-card
 
 ### Page Structure
 - `/` - Login page (StudentVue credentials)
@@ -74,6 +75,9 @@ Preferred communication style: Simple, everyday language.
 - `drizzle-orm` + `drizzle-zod`: Database ORM with Zod schema integration
 - Radix UI primitives: Accessible component foundations
 - `tailwindcss`: Utility-first CSS framework
+
+## Security
+A detailed security review is documented in `SECURITY_REVIEW.md`. Key areas: credentials in sessionStorage, no server-side sessions, no rate limiting on login, XML injection risk in SOAP client.
 
 ## License
 This project is proprietary software. 2026 Victor Tang. All Rights Reserved.

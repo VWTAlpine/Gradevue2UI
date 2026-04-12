@@ -4,26 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@shared/schema";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
+import { countMissingAssignments } from "@/lib/grade-utils";
 import { ChevronRight, AlertTriangle, MapPin } from "lucide-react";
 
 interface GradeCardProps {
   course: Course;
   index: number;
   onSelect?: (course: Course) => void;
-}
-
-function countMissingAssignments(course: Course): number {
-  return course.assignments.filter((a) => {
-    const scoreLower = a.score?.toLowerCase() || "";
-    const notesLower = a.notes?.toLowerCase() || "";
-    if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
-      return true;
-    }
-    if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
-      return true;
-    }
-    return false;
-  }).length;
 }
 
 export function GradeCard({ course, index, onSelect }: GradeCardProps) {

@@ -4,7 +4,13 @@ import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import {
+  calculateOverallGPA,
+  calculateAverageGrade,
+  getGradeLabel,
+  countMissingAssignments,
+} from "@/lib/grade-utils";
 
 interface AttendanceSummary {
   totalAbsences: number;
@@ -15,7 +21,7 @@ export default function DashboardPage() {
   const { gradebook, setSelectedCourse, gradeChanges, clearGradeChanges } = useGrades();
   const [attendance, setAttendance] = useState<AttendanceSummary>({ totalAbsences: 0, totalTardies: 0 });
 
-  const loadAttendance = () => {
+  const loadAttendance = useCallback(() => {
     const savedAttendance = localStorage.getItem("attendance");
     if (savedAttendance) {
       try {
@@ -25,10 +31,9 @@ export default function DashboardPage() {
           totalTardies: parsed.totalTardies || 0,
         });
       } catch {
-        // ignore
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadAttendance();
@@ -39,83 +44,24 @@ export default function DashboardPage() {
       }
     };
     
-    const handleFocus = () => {
-      loadAttendance();
-    };
-    
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener("focus", loadAttendance);
     
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("focus", loadAttendance);
     };
-  }, []);
+  }, [loadAttendance]);
 
   const courses = gradebook?.courses || [];
 
-  const countMissingAssignments = () => {
-    let count = 0;
-    courses.forEach((course) => {
-      course.assignments.forEach((a) => {
-        const scoreLower = a.score?.toLowerCase() || "";
-        const notesLower = a.notes?.toLowerCase() || "";
-        if (scoreLower.includes("missing") || scoreLower === "m" || scoreLower === "not turned in") {
-          count++;
-          return;
-        }
-        if (notesLower.includes("missing") || notesLower.includes("not turned in")) {
-          count++;
-        }
-      });
-    });
-    return count;
-  };
+  const missingCount = useMemo(
+    () => courses.reduce((sum, course) => sum + countMissingAssignments(course), 0),
+    [courses]
+  );
 
-  const missingCount = countMissingAssignments();
-
-  const calculateOverallGPA = () => {
-    const validGrades = courses.filter((c) => c.grade !== null);
-    if (validGrades.length === 0) return 0;
-
-    let totalPoints = 0;
-    validGrades.forEach((course) => {
-      const grade = course.grade ?? 0;
-      if (grade >= 93) totalPoints += 4.0;
-      else if (grade >= 90) totalPoints += 3.7;
-      else if (grade >= 87) totalPoints += 3.3;
-      else if (grade >= 83) totalPoints += 3.0;
-      else if (grade >= 80) totalPoints += 2.7;
-      else if (grade >= 77) totalPoints += 2.3;
-      else if (grade >= 73) totalPoints += 2.0;
-      else if (grade >= 70) totalPoints += 1.7;
-      else if (grade >= 67) totalPoints += 1.3;
-      else if (grade >= 63) totalPoints += 1.0;
-      else if (grade >= 60) totalPoints += 0.7;
-      else totalPoints += 0.0;
-    });
-
-    return totalPoints / validGrades.length;
-  };
-
-  const calculateAverageGrade = () => {
-    const validGrades = courses.filter((c) => c.grade !== null);
-    if (validGrades.length === 0) return 0;
-
-    const sum = validGrades.reduce((acc, c) => acc + (c.grade ?? 0), 0);
-    return sum / validGrades.length;
-  };
-
-  const gpa = calculateOverallGPA();
-  const averageGrade = calculateAverageGrade();
-
-  const getGradeLabel = (avg: number) => {
-    if (avg >= 90) return "A";
-    if (avg >= 80) return "B";
-    if (avg >= 70) return "C";
-    if (avg >= 60) return "D";
-    return "F";
-  };
+  const gpa = useMemo(() => calculateOverallGPA(courses), [courses]);
+  const averageGrade = useMemo(() => calculateAverageGrade(courses), [courses]);
 
   const reportingPeriod = gradebook?.reportingPeriod || {
     name: "Current Term",

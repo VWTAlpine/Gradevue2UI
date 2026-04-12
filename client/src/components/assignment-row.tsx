@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Assignment } from "@shared/schema";
 import { getGradeColor } from "@shared/schema";
+import { parseAssignmentScore, isAssignmentMissing, getLetterFromPercentage } from "@/lib/grade-utils";
 import { Edit2, Check, X, FlaskConical } from "lucide-react";
 
 interface AssignmentRowProps {
@@ -33,100 +34,8 @@ export function AssignmentRow({
   const [editEarned, setEditEarned] = useState("");
   const [editPossible, setEditPossible] = useState("");
 
-  const parseScore = () => {
-    // Get pointsPossible from assignment if available
-    const assignmentMax = (assignment.pointsPossible !== null && assignment.pointsPossible !== undefined) 
-      ? assignment.pointsPossible 
-      : null;
-    
-    if (assignment.pointsEarned !== null && assignment.pointsEarned !== undefined &&
-        assignmentMax !== null) {
-      const earned = assignment.pointsEarned;
-      return { earned, max: assignmentMax, percentage: assignmentMax > 0 ? (earned / assignmentMax) * 100 : null };
-    }
-    
-    const score = assignment.score;
-    const points = assignment.points;
-    
-    if (!score || score === "Not Graded" || score === "N/A") {
-      // Still try to get max from assignment.pointsPossible
-      if (assignmentMax !== null) {
-        return { earned: null, max: assignmentMax, percentage: null };
-      }
-      return { earned: null, max: null, percentage: null };
-    }
-
-    const scoreMatch = score.match(/^([\d.]+)\s*(?:out of|\/)\s*([\d.]+)/i);
-    if (scoreMatch) {
-      const earned = parseFloat(scoreMatch[1]);
-      const max = parseFloat(scoreMatch[2]);
-      return { earned, max, percentage: max > 0 ? (earned / max) * 100 : null };
-    }
-
-    const pointsMatch = points.match(/([\d.]+)\s*\/\s*([\d.]+)/);
-    if (pointsMatch) {
-      const earned = parseFloat(pointsMatch[1]);
-      const max = parseFloat(pointsMatch[2]);
-      return { earned, max, percentage: max > 0 ? (earned / max) * 100 : null };
-    }
-
-    const simpleNumber = parseFloat(score);
-    if (!isNaN(simpleNumber)) {
-      // Use assignmentMax if available, otherwise default to 100
-      const max = assignmentMax ?? 100;
-      return { earned: simpleNumber, max, percentage: max > 0 ? (simpleNumber / max) * 100 : simpleNumber };
-    }
-
-    // Return assignmentMax even if we couldn't parse earned
-    if (assignmentMax !== null) {
-      return { earned: null, max: assignmentMax, percentage: null };
-    }
-
-    return { earned: null, max: null, percentage: null };
-  };
-
-  const { earned, max, percentage } = parseScore();
-
-  // Check if assignment is missing
-  const isMissing = (): boolean => {
-    const scoreLower = (assignment.score || "").toLowerCase();
-    const notesLower = (assignment.notes || "").toLowerCase();
-    
-    // Check for explicit "missing" text
-    if (scoreLower.includes("missing") || notesLower.includes("missing")) {
-      return true;
-    }
-    
-    // Check if past due with zero score
-    if (assignment.dueDate) {
-      const dueDate = new Date(assignment.dueDate);
-      const now = new Date();
-      if (dueDate < now && earned !== null && earned === 0) {
-        return true;
-      }
-    }
-    
-    return false;
-  };
-
-  const assignmentIsMissing = isMissing();
-  
-  const getLetterFromPercentage = (pct: number | null) => {
-    if (pct === null) return "N/A";
-    if (pct >= 93) return "A";
-    if (pct >= 90) return "A-";
-    if (pct >= 87) return "B+";
-    if (pct >= 83) return "B";
-    if (pct >= 80) return "B-";
-    if (pct >= 77) return "C+";
-    if (pct >= 73) return "C";
-    if (pct >= 70) return "C-";
-    if (pct >= 67) return "D+";
-    if (pct >= 63) return "D";
-    if (pct >= 60) return "D-";
-    return "F";
-  };
-
+  const { earned, max, percentage } = parseAssignmentScore(assignment);
+  const assignmentIsMissing = isAssignmentMissing(assignment);
   const letterGrade = getLetterFromPercentage(percentage);
 
   const startEditing = () => {
