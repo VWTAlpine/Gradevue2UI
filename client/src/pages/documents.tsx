@@ -29,6 +29,12 @@ export default function DocumentsPage() {
       return;
     }
 
+    if (credentials.district === "demo") {
+      setDocuments([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       let documentsData = null;

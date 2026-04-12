@@ -50,6 +50,13 @@ export default function AttendancePage() {
         return;
       }
 
+      if (credentials.district === "demo") {
+        setAttendanceRecords([]);
+        setStats({ present: 0, absent: 0, tardy: 0, excused: 0 });
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         let attendanceData = null;
@@ -79,18 +86,12 @@ export default function AttendancePage() {
 
         if (attendanceData) {
           setAttendanceRecords(attendanceData.records || []);
-          const newStats = {
+          setStats({
             present: 0,
             absent: attendanceData.totalAbsences || 0,
             tardy: attendanceData.totalTardies || 0,
             excused: attendanceData.totalExcused || 0,
-          };
-          setStats(newStats);
-          localStorage.setItem("attendance", JSON.stringify({
-            totalAbsences: attendanceData.totalAbsences || 0,
-            totalTardies: attendanceData.totalTardies || 0,
-            totalExcused: attendanceData.totalExcused || 0,
-          }));
+          });
         }
       } catch (err: any) {
         console.error("Error fetching attendance:", err);

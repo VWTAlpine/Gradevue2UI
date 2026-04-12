@@ -22,6 +22,12 @@ export default function MessagesPage() {
       return;
     }
 
+    if (credentials.district === "demo") {
+      setMessages([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       let messagesData = null;
