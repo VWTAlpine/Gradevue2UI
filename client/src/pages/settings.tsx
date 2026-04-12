@@ -8,7 +8,7 @@ import { useTheme, presetThemes } from "@/lib/themeContext";
 import { useGrades } from "@/lib/gradeContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download, FileText, Check, Pencil, Smartphone, MessageSquare, Mail } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, LogOut, Bell, Palette, Download, FileText, Check, Pencil, Smartphone, MessageSquare, Mail } from "lucide-react";
 import { SiGithub } from "react-icons/si";
 
 type ColorTheme = "blue" | "green" | "purple" | "orange" | "rose" | "custom1" | "custom2" | "custom3";
@@ -646,29 +646,6 @@ export default function SettingsPage() {
               <Mail className="h-5 w-5" />
               <span className="font-medium">Send an email</span>
             </a>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-visible">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <CardTitle>Privacy & Security</CardTitle>
-              <CardDescription>
-                Manage your account security
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted/50 p-4">
-              <p className="text-sm text-muted-foreground">
-                Your StudentVue credentials are stored locally on your device and are
-                never sent to our servers. All communication is directly between your
-                device and StudentVue's servers over encrypted HTTPS.
-              </p>
-            </div>
           </CardContent>
         </Card>
 

@@ -1,6 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import StudentVue from "studentvue";
+import rateLimit from "express-rate-limit";
+
+const loginRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many login attempts. Please wait a minute before trying again." },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -111,7 +120,7 @@ export async function registerRoutes(
   }
 
   // StudentVue Login endpoint
-  app.post("/api/studentvue/login", async (req, res) => {
+  app.post("/api/studentvue/login", loginRateLimiter, async (req, res) => {
     try {
       const { district, username, password } = req.body;
 
@@ -120,6 +129,16 @@ export async function registerRoutes(
           success: false, 
           error: "Missing required fields: district, username, and password are required" 
         });
+      }
+
+      if (typeof district !== "string" || district.length > 500) {
+        return res.status(400).json({ success: false, error: "Invalid district URL" });
+      }
+      if (typeof username !== "string" || username.length > 100) {
+        return res.status(400).json({ success: false, error: "Invalid username" });
+      }
+      if (typeof password !== "string" || password.length > 500) {
+        return res.status(400).json({ success: false, error: "Invalid password" });
       }
 
       // Normalize the district URL for compatibility
@@ -147,32 +166,28 @@ export async function registerRoutes(
           if (errorMsg.includes('invalid') || errorMsg.includes('incorrect') || errorMsg.includes('password') || errorMsg.includes('username') || errorMsg.includes('user name')) {
             return res.status(401).json({ 
               success: false, 
-              error: "Invalid username or password. Please double-check your credentials and try again. Make sure there are no extra spaces.",
-              details: `Server response: ${loginResult.error}`
+              error: "Invalid username or password. Please double-check your credentials and try again. Make sure there are no extra spaces."
             });
           }
           
           if (errorMsg.includes('network') || errorMsg.includes('enotfound') || errorMsg.includes('econnrefused') || errorMsg.includes('econnreset') || errorMsg.includes('getaddrinfo')) {
             return res.status(400).json({ 
               success: false, 
-              error: "Could not connect to the district server. Please check your district URL and try again.",
-              details: `Server response: ${loginResult.error}`
+              error: "Could not connect to the district server. Please check your district URL and try again."
             });
           }
           
           if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
             return res.status(504).json({ 
               success: false, 
-              error: "Connection timed out. The district server may be slow or unavailable. Please try again.",
-              details: `Server response: ${loginResult.error}`
+              error: "Connection timed out. The district server may be slow or unavailable. Please try again."
             });
           }
           
           if (errorMsg.includes('certificate') || errorMsg.includes('ssl') || errorMsg.includes('tls')) {
             return res.status(400).json({ 
               success: false, 
-              error: "SSL/TLS certificate error. The district server may have security configuration issues.",
-              details: `Server response: ${loginResult.error}`
+              error: "SSL/TLS certificate error. The district server may have security configuration issues."
             });
           }
           
@@ -180,16 +195,14 @@ export async function registerRoutes(
           if (errorMsg.includes('critical error') || /\([a-f0-9]{5}\)/i.test(loginResult.error || '')) {
             return res.status(401).json({ 
               success: false, 
-              error: "StudentVue returned an error. Please verify your username and password are correct. If the problem persists, try logging into StudentVue directly to check if your account is locked or if there are maintenance issues.",
-              details: `Server response: ${loginResult.error}`
+              error: "StudentVue returned an error. Please verify your username and password are correct. If the problem persists, try logging into StudentVue directly to check if your account is locked or if there are maintenance issues."
             });
           }
           
-          // Generic error with details
+          // Generic error
           return res.status(401).json({ 
             success: false, 
-            error: `Login failed. The StudentVue server returned: ${loginResult.error}`,
-            details: loginResult.error
+            error: "Login failed. Please check your credentials and district URL, then try again."
           });
         }
 
@@ -225,21 +238,16 @@ export async function registerRoutes(
         });
       } catch (loginError: any) {
         console.error("StudentVue login error:", loginError.message);
-        console.error("Full error:", loginError);
-        
-        // Provide the raw error message for debugging
         return res.status(401).json({ 
           success: false, 
-          error: `Login failed: ${loginError.message || 'Please check your credentials and district URL.'}`,
-          details: loginError.message
+          error: "Login failed. Please check your credentials and district URL."
         });
       }
     } catch (err: any) {
       console.error("Server error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: "An unexpected error occurred. Please try again.",
-        details: err.message
+        error: "An unexpected error occurred. Please try again."
       });
     }
   });
@@ -348,7 +356,7 @@ export async function registerRoutes(
       console.error("Attendance endpoint error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: err.message 
+        error: "An unexpected error occurred fetching attendance."
       });
     }
   });
@@ -424,7 +432,7 @@ export async function registerRoutes(
       console.error("Documents endpoint error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: err.message 
+        error: "An unexpected error occurred fetching documents."
       });
     }
   });
@@ -489,7 +497,7 @@ export async function registerRoutes(
       console.error("Messages endpoint error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: err.message 
+        error: "An unexpected error occurred fetching messages."
       });
     }
   });
@@ -505,6 +513,11 @@ export async function registerRoutes(
           success: false, 
           error: "Missing required parameters" 
         });
+      }
+
+      const guidPattern = /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/;
+      if (!guidPattern.test(documentGU)) {
+        return res.status(400).json({ success: false, error: "Invalid document identifier" });
       }
 
       const districtUrl = normalizeDistrictUrl(district);
@@ -547,7 +560,7 @@ export async function registerRoutes(
       console.error("Document download endpoint error:", err);
       return res.status(500).json({ 
         success: false, 
-        error: err.message 
+        error: "An unexpected error occurred downloading the document."
       });
     }
   });

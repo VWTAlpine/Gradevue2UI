@@ -37,6 +37,15 @@ function normalizeDistrictUrl(input: string): string {
   }
 }
 
+function xmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export class StudentVueClient {
   domain: string;
   userID: string;
@@ -57,6 +66,9 @@ export class StudentVueClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+    const safeUserID = xmlEscape(this.userID);
+    const safePassword = xmlEscape(this.password);
+
     try {
       const res = await fetch(`https://${this.domain}/Service/PXPCommunication.asmx?WSDL`, {
         method: 'POST',
@@ -65,8 +77,8 @@ export class StudentVueClient {
           <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
             <soap12:Body>
               <${operation} xmlns="http://edupoint.com/webservices/">
-                <userID>${this.userID}</userID>
-                <password>${this.password}</password>
+                <userID>${safeUserID}</userID>
+                <password>${safePassword}</password>
                 <skipLoginLog>true</skipLoginLog>
                 <parent>false</parent>
                 <webServiceHandleName>PXPWebServices</webServiceHandleName>

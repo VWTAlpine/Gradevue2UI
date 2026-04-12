@@ -300,15 +300,15 @@ export function GradeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const savedGradebook = localStorage.getItem("gradebook");
+    const savedGradebook = sessionStorage.getItem("gradebook");
     const savedCredentials = sessionStorage.getItem("credentials");
-    const savedLastUpdated = localStorage.getItem("lastUpdated");
+    const savedLastUpdated = sessionStorage.getItem("lastUpdated");
     
     if (savedGradebook) {
       try {
         setGradebookState(JSON.parse(savedGradebook));
       } catch (e) {
-        localStorage.removeItem("gradebook");
+        sessionStorage.removeItem("gradebook");
       }
     }
     
@@ -324,24 +324,24 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       try {
         setLastUpdated(new Date(savedLastUpdated));
       } catch (e) {
-        localStorage.removeItem("lastUpdated");
+        sessionStorage.removeItem("lastUpdated");
       }
     }
   }, []);
 
   useEffect(() => {
     if (gradebook) {
-      localStorage.setItem("gradebook", JSON.stringify(gradebook));
+      sessionStorage.setItem("gradebook", JSON.stringify(gradebook));
     } else {
-      localStorage.removeItem("gradebook");
+      sessionStorage.removeItem("gradebook");
     }
   }, [gradebook]);
 
   useEffect(() => {
     if (lastUpdated) {
-      localStorage.setItem("lastUpdated", lastUpdated.toISOString());
+      sessionStorage.setItem("lastUpdated", lastUpdated.toISOString());
     } else {
-      localStorage.removeItem("lastUpdated");
+      sessionStorage.removeItem("lastUpdated");
     }
   }, [lastUpdated]);
 
@@ -357,8 +357,9 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     setGradebook(null);
     setCredentials(null);
     setSelectedCourse(null);
-    localStorage.removeItem("gradebook");
+    sessionStorage.removeItem("gradebook");
     sessionStorage.removeItem("credentials");
+    sessionStorage.removeItem("lastUpdated");
   };
 
   return (
