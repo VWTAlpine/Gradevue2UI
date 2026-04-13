@@ -163,21 +163,12 @@ export default function DashboardPage() {
 
       {reportingPeriods.length > 1 && (
         <div className="flex items-center gap-2" data-testid="period-selector">
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          <Select
-            value={selectedPeriodIndex.toString()}
-            onValueChange={(val) => switchReportingPeriod(parseInt(val))}
-            disabled={isLoading}
-          >
-            <SelectTrigger className="w-56" data-testid="select-period-trigger">
-              <SelectValue />
+          <Select disabled>
+            <SelectTrigger className="w-56 opacity-50 cursor-not-allowed" data-testid="select-period-trigger">
+              <span className="text-muted-foreground">Coming soon...</span>
             </SelectTrigger>
             <SelectContent>
-              {reportingPeriods.map((period, idx) => (
-                <SelectItem key={period.name || idx} value={idx.toString()} data-testid={`option-period-${idx}`}>
-                  {period.name}
-                </SelectItem>
-              ))}
+              <SelectItem value="_disabled">Coming soon...</SelectItem>
             </SelectContent>
           </Select>
         </div>
