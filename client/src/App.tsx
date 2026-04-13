@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RefreshIndicator } from "@/components/refresh-indicator";
-import { PWAInstallButton } from "@/components/pwa-install-button";
+import { Button } from "@/components/ui/button";
 import { GradeProvider, useGrades } from "@/lib/gradeContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { Footer } from "@/components/footer";
@@ -44,7 +44,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <div className="flex-1 flex justify-center">
               <RefreshIndicator />
             </div>
-            <PWAInstallButton />
+            <Button variant="outline" size="sm" disabled className="opacity-50 cursor-not-allowed text-xs" data-testid="button-pwa-coming-soon">
+              Coming soon...
+            </Button>
             <ThemeToggle />
           </header>
           <main className="flex-1 overflow-auto p-6">{children}</main>

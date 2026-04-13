@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { generateICSCalendar } from "@/lib/grade-utils";
 import { SiGithub } from "react-icons/si";
-import { PWAInstallButton } from "@/components/pwa-install-button";
 
 function hexToHsl(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -649,7 +648,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-visible">
+        <Card className="overflow-visible opacity-60">
           <CardHeader className="flex flex-row items-center gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/30">
               <Smartphone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
@@ -665,10 +664,12 @@ export default function SettingsPage() {
                 <p className="font-medium">Install as Web App</p>
                 <p className="text-sm text-muted-foreground">Add GradeVue to your home screen for quick access</p>
               </div>
-              <div data-testid="button-install-pwa"><PWAInstallButton size="default" /></div>
+              <Button variant="outline" disabled className="cursor-not-allowed" data-testid="button-install-pwa">
+                Coming soon...
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              The Install button appears when your browser supports app installation. If the button is missing, you may have already installed GradeVue or your browser doesn't support it.
+              Web app installation is coming soon. Stay tuned!
             </p>
           </CardContent>
         </Card>
