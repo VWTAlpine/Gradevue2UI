@@ -11,7 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download,
   FileText, Check, Pencil, Smartphone, MessageSquare, Mail, Type, Sliders,
-  BookOpen, TrendingUp, CalendarDays,
+  BookOpen, TrendingUp, CalendarDays, BrainCircuit,
 } from "lucide-react";
 import { generateICSCalendar } from "@/lib/grade-utils";
 import { SiGithub } from "react-icons/si";
@@ -529,6 +529,39 @@ export default function SettingsPage() {
                   setNotificationSettings({ ...notificationSettings, assignmentReminders: checked })
                 }
                 data-testid="switch-reminders"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-visible">
+          <CardHeader className="flex flex-row items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
+              <BrainCircuit className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle>AI Features</CardTitle>
+                <span className="inline-flex items-center rounded-full border border-violet-300 dark:border-violet-700 bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">
+                  Beta
+                </span>
+              </div>
+              <CardDescription>Control AI-powered grade analysis and predictions</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="ai-features">AI Grade Predictions &amp; Summaries</Label>
+                <p className="text-sm text-muted-foreground">Show AI-powered predictions on the dashboard and course pages</p>
+              </div>
+              <Switch
+                id="ai-features"
+                checked={notificationSettings.aiFeatures ?? true}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, aiFeatures: checked })
+                }
+                data-testid="switch-ai-features"
               />
             </div>
           </CardContent>

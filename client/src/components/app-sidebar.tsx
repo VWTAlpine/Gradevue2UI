@@ -96,13 +96,16 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 shrink-0">
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <img 
             src={logoImage} 
             alt="GradeVue Logo" 
             className="h-20 w-auto object-cover scale-[2.5]"
             data-testid="img-sidebar-logo"
           />
+          <span className="inline-flex items-center rounded-full border border-violet-300 dark:border-violet-700 bg-violet-100 dark:bg-violet-900/40 px-2.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide" data-testid="badge-app-beta">
+            Beta
+          </span>
         </div>
       </SidebarHeader>
 

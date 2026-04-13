@@ -66,6 +66,7 @@ export default function CourseDetailPage() {
     removeHypotheticalAssignment,
     clearAllOverrides,
     updateAssignmentScore,
+    notificationSettings,
   } = useGrades();
 
   const getOriginalAssignment = (assignmentIndex: number) => {
@@ -533,7 +534,7 @@ export default function CourseDetailPage() {
         </CardContent>
       </Card>
 
-      {!ungraded && (() => {
+      {(notificationSettings.aiFeatures ?? true) && !ungraded && (() => {
         const prediction = predictFinalGrade(course);
         if (!prediction) return null;
         const confidenceColor =
@@ -548,7 +549,12 @@ export default function CourseDetailPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
                 <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               </div>
-              <CardTitle className="text-base">Predicted Final Grade</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">Predicted Final Grade</CardTitle>
+                <span className="inline-flex items-center rounded-full border border-violet-300 dark:border-violet-700 bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">
+                  Beta
+                </span>
+              </div>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex items-center justify-between">

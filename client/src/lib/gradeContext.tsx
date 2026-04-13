@@ -64,12 +64,14 @@ export interface NotificationSettings {
   gradeChangeAlerts: boolean;
   assignmentReminders: boolean;
   minimumGradeThreshold: number;
+  aiFeatures: boolean;
 }
 
 const defaultNotificationSettings: NotificationSettings = {
   gradeChangeAlerts: true,
   assignmentReminders: false,
   minimumGradeThreshold: 70,
+  aiFeatures: true,
 };
 
 const GradeContext = createContext<GradeContextType | undefined>(undefined);

@@ -4,7 +4,7 @@ import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2, BrainCircuit } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   calculateOverallGPA,
@@ -30,8 +30,10 @@ export default function DashboardPage() {
     selectedPeriodIndex,
     switchReportingPeriod,
     isLoading,
+    notificationSettings,
   } = useGrades();
   const [attendance, setAttendance] = useState<AttendanceSummary>({ totalAbsences: 0, totalTardies: 0 });
+  const [aiCollapsed, setAiCollapsed] = useState(false);
 
   const loadAttendance = useCallback(() => {
     const savedAttendance = localStorage.getItem("attendance");
@@ -309,58 +311,75 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {gradePredictions.length > 0 && (
+      {(notificationSettings.aiFeatures ?? true) && gradePredictions.length > 0 && (
         <Card className="overflow-visible" data-testid="card-grade-predictions">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
               <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
             </div>
-            <CardTitle className="text-lg">Grade Predictions</CardTitle>
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <CardTitle className="text-lg">Grade Predictions</CardTitle>
+              <span className="inline-flex items-center rounded-full border border-violet-300 dark:border-violet-700 bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">
+                Beta
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setAiCollapsed(!aiCollapsed)}
+              data-testid="button-toggle-ai-overview"
+              aria-label={aiCollapsed ? "Expand AI overview" : "Collapse AI overview"}
+            >
+              {aiCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </Button>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {gradePredictions.map(({ course, prediction }) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between rounded-md bg-muted/50 p-3"
-                  data-testid={`prediction-row-${course.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate" data-testid={`prediction-course-name-${course.id}`}>
-                      {course.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Current: {(course.grade ?? 0).toFixed(1)}% ({course.letterGrade})
-                    </p>
-                    {prediction!.driverExplanation && (
-                      <p className="text-xs text-muted-foreground italic mt-0.5" data-testid={`prediction-why-${course.id}`}>
-                        {prediction!.driverExplanation}
+          {!aiCollapsed && (
+            <CardContent>
+              <div className="space-y-2">
+                {gradePredictions.map(({ course, prediction }) => (
+                  <div
+                    key={course.id}
+                    className="flex items-center justify-between rounded-md bg-muted/50 p-3"
+                    data-testid={`prediction-row-${course.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate" data-testid={`prediction-course-name-${course.id}`}>
+                        {course.name}
                       </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 ml-3 shrink-0">
-                    <Badge
-                      variant="secondary"
-                      className={confidenceColor(prediction!.confidence)}
-                      data-testid={`prediction-confidence-${course.id}`}
-                    >
-                      {prediction!.confidence}
-                    </Badge>
-                    <div className="text-right">
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: getGradeHexColor(prediction!.predictedGrade) }}
-                        data-testid={`prediction-grade-${course.id}`}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Current: {(course.grade ?? 0).toFixed(1)}% ({course.letterGrade})
+                      </p>
+                      {prediction!.driverExplanation && (
+                        <p className="text-xs text-muted-foreground italic mt-0.5" data-testid={`prediction-why-${course.id}`}>
+                          {prediction!.driverExplanation}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-3 shrink-0">
+                      <Badge
+                        variant="secondary"
+                        className={confidenceColor(prediction!.confidence)}
+                        data-testid={`prediction-confidence-${course.id}`}
                       >
-                        {prediction!.predictedGrade.toFixed(1)}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">{prediction!.predictedLetter}</p>
+                        {prediction!.confidence}
+                      </Badge>
+                      <div className="text-right">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: getGradeHexColor(prediction!.predictedGrade) }}
+                          data-testid={`prediction-grade-${course.id}`}
+                        >
+                          {prediction!.predictedGrade.toFixed(1)}%
+                        </p>
+                        <p className="text-xs text-muted-foreground">{prediction!.predictedLetter}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
+                ))}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 
