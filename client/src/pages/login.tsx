@@ -350,7 +350,7 @@ export default function LoginPage() {
 
       <footer className="shrink-0 px-4 py-3 text-center text-xs text-muted-foreground/70" data-testid="app-footer">
         <p>
-          Developed by Victor T, Connor Rakov, and the GradeVue 2 Team.
+          Developed by Victor T. and the GradeVue 2 Team · With contributions from Connor Rakov.
           <span className="mx-1">|</span>
           © 2026 GradeVue Contributors. Licensed under{" "}
           <a

@@ -12,7 +12,9 @@ import { GradeProvider, useGrades } from "@/lib/gradeContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { Footer } from "@/components/footer";
 
+import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
+import CreditsPage from "@/pages/credits";
 import DashboardPage from "@/pages/dashboard";
 import AssignmentsPage from "@/pages/assignments";
 import CourseDetailPage from "@/pages/course-detail";
@@ -78,7 +80,13 @@ function Router() {
   return (
     <Switch>
       <Route path="/">
+        {isLoggedIn ? <Redirect to="/dashboard" /> : <LandingPage />}
+      </Route>
+      <Route path="/login">
         {isLoggedIn ? <Redirect to="/dashboard" /> : <LoginPage />}
+      </Route>
+      <Route path="/credits">
+        <CreditsPage />
       </Route>
       <Route path="/dashboard">
         <ProtectedRoute component={DashboardPage} />
