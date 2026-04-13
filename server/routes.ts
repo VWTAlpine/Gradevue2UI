@@ -1044,6 +1044,27 @@ function generateDemoData() {
         { name: "Homework", weight: 25, score: 87, points: "217/250" },
       ],
     },
+    {
+      id: "course-6",
+      name: "Study Hall",
+      period: 7,
+      teacher: "Mr. Clark",
+      room: "100",
+      grade: 0,
+      letterGrade: "N/A",
+      assignments: [
+        {
+          name: "Attendance Check",
+          type: "Participation",
+          date: "Dec 1, 2024",
+          dueDate: "Dec 1, 2024",
+          score: "Not Graded",
+          points: "",
+          notes: "",
+        },
+      ],
+      categories: [],
+    },
   ];
 
   return {
