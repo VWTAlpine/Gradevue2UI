@@ -106,11 +106,11 @@ export function isCourseUngraded(course: Course): boolean {
   if (course.grade === null) return true;
 
   if (course.grade === 0) {
-    const hasAnyGradedAssignment = course.assignments.some(a => {
-      const points = getAssignmentPoints(a);
-      return points !== null && points.possible > 0;
+    const hasScoredAssignment = course.assignments.some(a => {
+      const parsed = parseAssignmentScore(a);
+      return parsed.earned !== null;
     });
-    return !hasAnyGradedAssignment;
+    return !hasScoredAssignment;
   }
 
   return false;

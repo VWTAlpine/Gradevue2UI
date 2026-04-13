@@ -301,6 +301,15 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     setGradebookState(newGradebook);
     if (newGradebook) {
       setLastUpdated(new Date());
+      if (newGradebook.reportingPeriods && newGradebook.reportingPeriod) {
+        const currentName = newGradebook.reportingPeriod.name;
+        const matchIndex = newGradebook.reportingPeriods.findIndex(
+          p => p.name === currentName
+        );
+        if (matchIndex >= 0) {
+          setSelectedPeriodIndex(matchIndex);
+        }
+      }
     }
   };
 
@@ -353,9 +362,14 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (data.success && data.data) {
-        setGradebookState(data.data);
+        const updatedData = {
+          ...data.data,
+          studentInfo: data.data.studentInfo || gradebook?.studentInfo,
+          reportingPeriods: data.data.reportingPeriods || gradebook?.reportingPeriods,
+        };
+        setGradebookState(updatedData);
         setLastUpdated(new Date());
-        sessionStorage.setItem("gradebook", JSON.stringify(data.data));
+        sessionStorage.setItem("gradebook", JSON.stringify(updatedData));
       } else {
         setSelectedPeriodIndex(previousIndex);
       }
