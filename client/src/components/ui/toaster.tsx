@@ -1,3 +1,4 @@
+// Based on shadcn/ui — https://github.com/shadcn-ui/ui (MIT)
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,

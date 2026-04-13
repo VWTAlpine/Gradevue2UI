@@ -78,6 +78,7 @@ export class StudentVueClient {
     const safePassword = xmlEscape(this.password);
 
     try {
+      // SOAP envelope structure follows Connor Rakov's pattern for the StudentVue API
       const res = await fetch(`https://${this.domain}/Service/PXPCommunication.asmx?WSDL`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/soap+xml; charset=utf-8' },
@@ -105,6 +106,7 @@ export class StudentVueClient {
       }
 
       const text = await res.text();
+      // Response parsing follows Connor Rakov's approach for unwrapping the SOAP envelope
       const envelope = parser.parse(text);
       
       const body = envelope['soap:Envelope']?.['soap:Body'];

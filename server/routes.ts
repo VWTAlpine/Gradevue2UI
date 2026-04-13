@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import StudentVue from "studentvue";
+import StudentVue from "studentvue"; // studentvue npm package by Joseph Marbella — https://github.com/StudentVue/studentvue.js
 import rateLimit from "express-rate-limit";
 
 const loginRateLimiter = rateLimit({
@@ -94,6 +94,7 @@ export async function registerRoutes(
     
     for (const url of variants) {
       try {
+        // studentvue npm package by Joseph Marbella — performs the SOAP login handshake
         const client = await Promise.race([
           StudentVue.login(url, {
             username: username.trim(),
@@ -208,7 +209,7 @@ export async function registerRoutes(
 
         const client = loginResult.client;
 
-        // Fetch gradebook and student info in parallel with timeout
+        // Fetch gradebook and student info in parallel with timeout (via studentvue package by Joseph Marbella)
         const [gradebook, studentInfo] = await Promise.all([
           withTimeout(client.gradebook(), 20000, "Gradebook fetch").catch((e: any) => {
             console.error("Gradebook fetch error:", e.message);
@@ -298,6 +299,7 @@ export async function registerRoutes(
 
         const periodIndex = typeof reportingPeriodIndex === "number" ? reportingPeriodIndex : 0;
 
+        // Fetch period-specific gradebook via studentvue package by Joseph Marbella
         const gradebook = await withTimeout(
           client.gradebook(periodIndex),
           20000,
@@ -368,7 +370,7 @@ export async function registerRoutes(
       }
 
       try {
-        const attendance = await loginResult.client.attendance();
+        const attendance = await loginResult.client.attendance(); // studentvue package by Joseph Marbella
         const records: any[] = [];
         let totalAbsences = 0;
         let totalTardies = 0;
@@ -468,7 +470,7 @@ export async function registerRoutes(
       }
 
       try {
-        const documentsData = await loginResult.client.documents();
+        const documentsData = await loginResult.client.documents(); // studentvue package by Joseph Marbella
         const documents: any[] = [];
 
         const docList = documentsData || [];
@@ -544,7 +546,7 @@ export async function registerRoutes(
       }
 
       try {
-        const messagesData = await loginResult.client.messages();
+        const messagesData = await loginResult.client.messages(); // studentvue package by Joseph Marbella
         const messages: any[] = [];
 
         const msgList = messagesData || [];

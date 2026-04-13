@@ -1,3 +1,4 @@
+// Based on shadcn/ui — https://github.com/shadcn-ui/ui (MIT)
 import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDown } from "lucide-react"

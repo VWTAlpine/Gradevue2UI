@@ -1,3 +1,4 @@
+// Based on shadcn/ui — https://github.com/shadcn-ui/ui (MIT)
 "use client"
 
 import { GripVertical } from "lucide-react"

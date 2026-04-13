@@ -1,3 +1,5 @@
+// beforeinstallprompt capture pattern follows the Chromium PWA spec and community-documented approaches.
+// See: https://web.dev/customize-install/
 import { useState, useEffect } from "react";
 
 interface BeforeInstallPromptEvent extends Event {

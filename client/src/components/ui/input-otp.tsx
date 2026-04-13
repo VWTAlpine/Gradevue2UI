@@ -1,3 +1,4 @@
+// Based on shadcn/ui — https://github.com/shadcn-ui/ui (MIT)
 import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 import { Dot } from "lucide-react"

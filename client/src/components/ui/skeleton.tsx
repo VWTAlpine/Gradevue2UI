@@ -1,3 +1,4 @@
+// Based on shadcn/ui — https://github.com/shadcn-ui/ui (MIT)
 import { cn } from "@/lib/utils"
 
 function Skeleton({
