@@ -228,6 +228,141 @@ export function getLetterFromPercentage(pct: number | null): string {
   return "F";
 }
 
+export interface GradePrediction {
+  predictedGrade: number;
+  predictedLetter: string;
+  confidence: "Low" | "Medium" | "High";
+  driverExplanation: string;
+}
+
+export function predictFinalGrade(course: { grade: number | null; letterGrade: string; assignments: Assignment[]; categories?: { name: string; weight: number; score: number }[] }): GradePrediction | null {
+  if (course.grade === null) return null;
+
+  const assignments = course.assignments;
+  const gradedAssignments = assignments.filter(a => {
+    const p = parseAssignmentScore(a);
+    return p.earned !== null && p.max !== null && p.max > 0;
+  });
+
+  const totalAssignments = assignments.length;
+  const gradedCount = gradedAssignments.length;
+
+  let confidence: "Low" | "Medium" | "High";
+  if (gradedCount === 0) return null;
+  if (gradedCount < 3) {
+    confidence = "Low";
+  } else if (gradedCount < 8) {
+    confidence = "Medium";
+  } else {
+    confidence = "High";
+  }
+
+  const categoryScores: Map<string, { totalEarned: number; totalPossible: number; weight: number }> = new Map();
+  const categories = course.categories && course.categories.length > 0 ? course.categories : [];
+
+  if (categories.length > 0) {
+    for (const cat of categories) {
+      categoryScores.set(cat.name.toLowerCase(), { totalEarned: 0, totalPossible: 0, weight: cat.weight });
+    }
+    for (const a of gradedAssignments) {
+      const p = parseAssignmentScore(a);
+      if (p.earned === null || p.max === null || p.max === 0) continue;
+      const aType = (a.type || "").toLowerCase();
+      let matched = false;
+      for (const cat of categories) {
+        const catLower = cat.name.toLowerCase();
+        if (aType.includes(catLower) || catLower.includes(aType)) {
+          const entry = categoryScores.get(catLower)!;
+          entry.totalEarned += p.earned;
+          entry.totalPossible += p.max;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && categories.length > 0) {
+        const firstCat = categories[0].name.toLowerCase();
+        const entry = categoryScores.get(firstCat)!;
+        entry.totalEarned += p.earned;
+        entry.totalPossible += p.max;
+      }
+    }
+  }
+
+  let predictedGrade = course.grade;
+
+  if (categories.length > 0) {
+    const categorySummaries: Array<{ name: string; score: number; weight: number }> = [];
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (const cat of categories) {
+      const entry = categoryScores.get(cat.name.toLowerCase());
+      if (entry && entry.totalPossible > 0) {
+        const score = (entry.totalEarned / entry.totalPossible) * 100;
+        categorySummaries.push({ name: cat.name, score, weight: cat.weight });
+        weightedSum += score * cat.weight;
+        totalWeight += cat.weight;
+      }
+    }
+    if (totalWeight > 0) {
+      predictedGrade = weightedSum / totalWeight;
+    }
+
+    const driverExplanation = buildDriverExplanation(categorySummaries);
+    const predictedLetter = getLetterFromPercentage(predictedGrade);
+    return { predictedGrade, predictedLetter, confidence, driverExplanation };
+  }
+
+  const scores = gradedAssignments.map(a => {
+    const p = parseAssignmentScore(a);
+    return p.earned! / p.max!;
+  });
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  predictedGrade = avg * 100;
+
+  const ungradedCount = totalAssignments - gradedCount;
+  if (ungradedCount > 0 && ungradedCount / totalAssignments > 0.4) {
+    confidence = "Low";
+  }
+
+  const recentTrend = scores.slice(-5);
+  const recentAvg = recentTrend.reduce((a, b) => a + b, 0) / recentTrend.length;
+  const overallAvg = avg;
+  let driverExplanation = "";
+  if (recentAvg > overallAvg + 0.05) {
+    driverExplanation = "Recent scores trending up";
+  } else if (recentAvg < overallAvg - 0.05) {
+    driverExplanation = "Recent scores trending down";
+  } else {
+    driverExplanation = "Grades are consistent";
+  }
+
+  const predictedLetter = getLetterFromPercentage(predictedGrade);
+  return { predictedGrade, predictedLetter, confidence, driverExplanation };
+}
+
+function buildDriverExplanation(categories: Array<{ name: string; score: number; weight: number }>): string {
+  if (categories.length === 0) return "Based on current grades";
+  const sorted = [...categories].sort((a, b) => b.score - a.score);
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+  if (categories.length === 1) {
+    return `${best.name} at ${best.score.toFixed(0)}%`;
+  }
+  if (best.name === worst.name) {
+    return `${best.name} at ${best.score.toFixed(0)}%`;
+  }
+  if (best.score >= 90 && worst.score < 75) {
+    return `${best.name} strong, ${worst.name} pulling grade down`;
+  }
+  if (worst.score < 70) {
+    return `${worst.name} pulling grade down`;
+  }
+  if (best.score >= 90) {
+    return `${best.name} leading performance`;
+  }
+  return `${best.name} strongest, ${worst.name} weakest`;
+}
+
 function escapeICSText(text: string): string {
   return text
     .replace(/\\/g, "\\\\")

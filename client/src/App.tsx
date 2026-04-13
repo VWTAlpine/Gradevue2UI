@@ -23,6 +23,7 @@ import MessagesPage from "@/pages/messages";
 import TermComparisonPage from "@/pages/term-comparison";
 import SettingsPage from "@/pages/settings";
 import ProfilePage from "@/pages/profile";
+import DeadlinesPage from "@/pages/deadlines";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -99,6 +100,9 @@ function Router() {
       </Route>
       <Route path="/messages">
         <ProtectedRoute component={MessagesPage} />
+      </Route>
+      <Route path="/deadlines">
+        <ProtectedRoute component={DeadlinesPage} />
       </Route>
       <Route path="/terms">
         <ProtectedRoute component={TermComparisonPage} />

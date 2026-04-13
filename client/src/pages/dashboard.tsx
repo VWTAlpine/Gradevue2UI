@@ -2,8 +2,9 @@ import { useGrades, type GradeChange } from "@/lib/gradeContext";
 import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2, BrainCircuit } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   calculateOverallGPA,
@@ -11,6 +12,8 @@ import {
   getGradeLabel,
   countMissingAssignments,
   isCourseUngraded,
+  predictFinalGrade,
+  getGradeHexColor,
 } from "@/lib/grade-utils";
 
 interface AttendanceSummary {
@@ -120,6 +123,22 @@ export default function DashboardPage() {
   const gradeTrendData = generateTrendData();
 
   const hasGradedCourses = gradedCourseCount > 0;
+
+  const gradePredictions = useMemo(() => {
+    return courses
+      .filter(c => !isCourseUngraded(c))
+      .map(c => ({
+        course: c,
+        prediction: predictFinalGrade(c),
+      }))
+      .filter(p => p.prediction !== null);
+  }, [courses]);
+
+  const confidenceColor = (confidence: "Low" | "Medium" | "High") => {
+    if (confidence === "High") return "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300";
+    if (confidence === "Medium") return "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300";
+    return "bg-muted text-muted-foreground";
+  };
 
   return (
     <div className="space-y-8">
@@ -285,6 +304,56 @@ export default function DashboardPage() {
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {gradePredictions.length > 0 && (
+        <Card className="overflow-visible" data-testid="card-grade-predictions">
+          <CardHeader className="flex flex-row items-center gap-3 pb-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
+              <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            </div>
+            <CardTitle className="text-lg">Grade Predictions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {gradePredictions.map(({ course, prediction }) => (
+                <div
+                  key={course.id}
+                  className="flex items-center justify-between rounded-md bg-muted/50 p-3"
+                  data-testid={`prediction-row-${course.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate" data-testid={`prediction-course-name-${course.id}`}>
+                      {course.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Current: {(course.grade ?? 0).toFixed(1)}% ({course.letterGrade})
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                    <Badge
+                      variant="secondary"
+                      className={confidenceColor(prediction!.confidence)}
+                      data-testid={`prediction-confidence-${course.id}`}
+                    >
+                      {prediction!.confidence}
+                    </Badge>
+                    <div className="text-right">
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: getGradeHexColor(prediction!.predictedGrade) }}
+                        data-testid={`prediction-grade-${course.id}`}
+                      >
+                        {prediction!.predictedGrade.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">{prediction!.predictedLetter}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
