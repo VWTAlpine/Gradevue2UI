@@ -54,7 +54,23 @@ interface GradeContextType {
   clearAllOverrides: () => void;
   lastUpdated: Date | null;
   refreshGrades: () => Promise<void>;
+  selectedPeriodIndex: number;
+  switchReportingPeriod: (index: number) => Promise<void>;
+  notificationSettings: NotificationSettings;
+  setNotificationSettings: (settings: NotificationSettings) => void;
 }
+
+export interface NotificationSettings {
+  gradeChangeAlerts: boolean;
+  assignmentReminders: boolean;
+  minimumGradeThreshold: number;
+}
+
+const defaultNotificationSettings: NotificationSettings = {
+  gradeChangeAlerts: true,
+  assignmentReminders: false,
+  minimumGradeThreshold: 70,
+};
 
 const GradeContext = createContext<GradeContextType | undefined>(undefined);
 
@@ -67,8 +83,23 @@ export function GradeProvider({ children }: { children: ReactNode }) {
   const [gradeChanges, setGradeChanges] = useState<GradeChange[]>([]);
   const [courseOverrides, setCourseOverrides] = useState<Map<string, CourseOverrides>>(new Map());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
+  const [notificationSettings, setNotificationSettingsState] = useState<NotificationSettings>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("notificationSettings");
+      if (stored) {
+        try { return { ...defaultNotificationSettings, ...JSON.parse(stored) }; } catch { /* use defaults */ }
+      }
+    }
+    return defaultNotificationSettings;
+  });
 
   const isLoggedIn = gradebook !== null;
+
+  const setNotificationSettings = (settings: NotificationSettings) => {
+    setNotificationSettingsState(settings);
+    localStorage.setItem("notificationSettings", JSON.stringify(settings));
+  };
 
   const updateAssignmentScore = (courseId: string, assignmentIndex: number, pointsEarned: number, pointsPossible: number) => {
     setCourseOverrides(prev => {
@@ -262,7 +293,9 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     if (newGradebook && gradebook) {
       const changes = detectGradeChanges(gradebook, newGradebook);
       if (changes.length > 0) {
-        setGradeChanges((prev) => [...changes, ...prev].slice(0, 50));
+        if (notificationSettings.gradeChangeAlerts) {
+          setGradeChanges((prev) => [...changes, ...prev].slice(0, 50));
+        }
       }
     }
     setGradebookState(newGradebook);
@@ -290,6 +323,45 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to refresh grades:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const switchReportingPeriod = async (index: number) => {
+    if (!credentials) return;
+
+    if (credentials.district === "demo") {
+      setSelectedPeriodIndex(index);
+      return;
+    }
+
+    const previousIndex = selectedPeriodIndex;
+    setSelectedPeriodIndex(index);
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/studentvue/gradebook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          district: credentials.district,
+          username: credentials.username,
+          password: credentials.password,
+          reportingPeriodIndex: index,
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setGradebookState(data.data);
+        setLastUpdated(new Date());
+        sessionStorage.setItem("gradebook", JSON.stringify(data.data));
+      } else {
+        setSelectedPeriodIndex(previousIndex);
+      }
+    } catch (error) {
+      console.error("Failed to switch reporting period:", error);
+      setSelectedPeriodIndex(previousIndex);
     } finally {
       setIsLoading(false);
     }
@@ -357,6 +429,7 @@ export function GradeProvider({ children }: { children: ReactNode }) {
     setGradebook(null);
     setCredentials(null);
     setSelectedCourse(null);
+    setSelectedPeriodIndex(0);
     sessionStorage.removeItem("gradebook");
     sessionStorage.removeItem("credentials");
     sessionStorage.removeItem("lastUpdated");
@@ -387,6 +460,10 @@ export function GradeProvider({ children }: { children: ReactNode }) {
         clearAllOverrides,
         lastUpdated,
         refreshGrades,
+        selectedPeriodIndex,
+        switchReportingPeriod,
+        notificationSettings,
+        setNotificationSettings,
       }}
     >
       {children}

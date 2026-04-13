@@ -252,6 +252,90 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/studentvue/gradebook", loginRateLimiter, async (req, res) => {
+    try {
+      const { district, username, password, reportingPeriodIndex } = req.body;
+
+      if (!district || !username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required fields: district, username, and password are required"
+        });
+      }
+
+      if (typeof district !== "string" || district.length > 500) {
+        return res.status(400).json({ success: false, error: "Invalid district URL" });
+      }
+      if (typeof username !== "string" || username.length > 100) {
+        return res.status(400).json({ success: false, error: "Invalid username" });
+      }
+      if (typeof password !== "string" || password.length > 500) {
+        return res.status(400).json({ success: false, error: "Invalid password" });
+      }
+
+      const districtUrl = normalizeDistrictUrl(district);
+
+      try {
+        const loginResult = await attemptLogin(districtUrl, username, password, 30000);
+
+        if (!loginResult.client) {
+          return res.status(401).json({
+            success: false,
+            error: "Login failed. Please check your credentials."
+          });
+        }
+
+        const client = loginResult.client;
+
+        const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
+          return Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+              setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs/1000} seconds`)), timeoutMs)
+            )
+          ]);
+        };
+
+        const periodIndex = typeof reportingPeriodIndex === "number" ? reportingPeriodIndex : 0;
+
+        const gradebook = await withTimeout(
+          client.gradebook(periodIndex),
+          20000,
+          "Gradebook fetch"
+        ).catch((e: any) => {
+          console.error("Gradebook fetch error:", e.message);
+          return null;
+        });
+
+        if (!gradebook) {
+          return res.status(500).json({
+            success: false,
+            error: "Could not fetch gradebook data for the selected reporting period."
+          });
+        }
+
+        const parsedGradebook = parseGradebook(gradebook, null);
+
+        return res.json({
+          success: true,
+          data: parsedGradebook
+        });
+      } catch (loginError: any) {
+        console.error("Gradebook fetch error:", loginError.message);
+        return res.status(401).json({
+          success: false,
+          error: "Failed to fetch gradebook."
+        });
+      }
+    } catch (err: any) {
+      console.error("Server error:", err);
+      return res.status(500).json({
+        success: false,
+        error: "An unexpected error occurred."
+      });
+    }
+  });
+
   // Demo data endpoint
   app.get("/api/studentvue/demo", (req, res) => {
     const demoData = generateDemoData();

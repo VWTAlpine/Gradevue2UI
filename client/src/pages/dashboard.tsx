@@ -3,13 +3,14 @@ import { StatCard } from "@/components/stat-card";
 import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2 } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   calculateOverallGPA,
   calculateAverageGrade,
   getGradeLabel,
   countMissingAssignments,
+  isCourseUngraded,
 } from "@/lib/grade-utils";
 
 interface AttendanceSummary {
@@ -18,7 +19,15 @@ interface AttendanceSummary {
 }
 
 export default function DashboardPage() {
-  const { gradebook, setSelectedCourse, gradeChanges, clearGradeChanges } = useGrades();
+  const {
+    gradebook,
+    setSelectedCourse,
+    gradeChanges,
+    clearGradeChanges,
+    selectedPeriodIndex,
+    switchReportingPeriod,
+    isLoading,
+  } = useGrades();
   const [attendance, setAttendance] = useState<AttendanceSummary>({ totalAbsences: 0, totalTardies: 0 });
 
   const loadAttendance = useCallback(() => {
@@ -54,6 +63,12 @@ export default function DashboardPage() {
   }, [loadAttendance]);
 
   const courses = gradebook?.courses || [];
+  const reportingPeriods = gradebook?.reportingPeriods || [];
+
+  const gradedCourseCount = useMemo(
+    () => courses.filter(c => !isCourseUngraded(c)).length,
+    [courses]
+  );
 
   const missingCount = useMemo(
     () => courses.reduce((sum, course) => sum + countMissingAssignments(course), 0),
@@ -104,6 +119,8 @@ export default function DashboardPage() {
   const gpaTrendData = generateTrendData().map(v => (v / 100) * 4);
   const gradeTrendData = generateTrendData();
 
+  const hasGradedCourses = gradedCourseCount > 0;
+
   return (
     <div className="space-y-8">
       <div>
@@ -116,11 +133,32 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {reportingPeriods.length > 1 && (
+        <div className="flex flex-wrap gap-2" data-testid="period-selector">
+          {reportingPeriods.map((period, idx) => (
+            <Button
+              key={period.name || idx}
+              variant={selectedPeriodIndex === idx ? "default" : "outline"}
+              size="sm"
+              onClick={() => switchReportingPeriod(idx)}
+              disabled={isLoading}
+              className="gap-1.5"
+              data-testid={`button-period-${idx}`}
+            >
+              {isLoading && selectedPeriodIndex === idx && (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+              {period.name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" data-testid="stats-grid">
         <StatCard
           title="Overall GPA"
-          value={gpa.toFixed(2)}
-          subtitle="/ 4.0"
+          value={hasGradedCourses ? gpa.toFixed(2) : "N/A"}
+          subtitle={hasGradedCourses ? "/ 4.0" : "No graded courses"}
           chartData={gpaTrendData}
           chartColor="#3b82f6"
           showChartBackground
@@ -131,8 +169,8 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Average Grade"
-          value={`${averageGrade.toFixed(1)}%`}
-          subtitle={getGradeLabel(averageGrade) + "+"}
+          value={hasGradedCourses ? `${averageGrade.toFixed(1)}%` : "N/A"}
+          subtitle={hasGradedCourses ? getGradeLabel(averageGrade) : "No graded courses"}
           chartData={gradeTrendData}
           chartColor="#10b981"
           showChartBackground

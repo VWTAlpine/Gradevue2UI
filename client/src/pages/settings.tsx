@@ -11,8 +11,9 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Moon, Sun, Monitor, RefreshCw, LogOut, Shield, Bell, Palette, Download,
   FileText, Check, Pencil, Smartphone, MessageSquare, Mail, Type, Sliders,
-  BookOpen, TrendingUp,
+  BookOpen, TrendingUp, CalendarDays,
 } from "lucide-react";
+import { generateICSCalendar } from "@/lib/grade-utils";
 import { SiGithub } from "react-icons/si";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -142,7 +143,7 @@ export default function SettingsPage() {
     fontFamily, setFontFamily,
     borderRadius, setBorderRadius,
   } = useTheme();
-  const { logout, credentials, setIsLoading, setGradebook, gradebook } = useGrades();
+  const { logout, credentials, setIsLoading, setGradebook, gradebook, notificationSettings, setNotificationSettings } = useGrades();
   const { toast } = useToast();
   const [editingCustom, setEditingCustom] = useState<"custom1" | "custom2" | "custom3" | null>(null);
   const [customHex, setCustomHex] = useState("#3b82f6");
@@ -227,6 +228,16 @@ export default function SettingsPage() {
     const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
     downloadFile(csvContent, "grades.csv", "text/csv");
     toast({ title: "Export Successful", description: "Grades exported to CSV" });
+  };
+
+  const exportCalendarICS = () => {
+    if (!gradebook?.courses || gradebook.courses.length === 0) {
+      toast({ title: "No Data", description: "No assignment data available to export", variant: "destructive" });
+      return;
+    }
+    const icsContent = generateICSCalendar(gradebook.courses);
+    downloadFile(icsContent, "gradevue-assignments.ics", "text/calendar");
+    toast({ title: "Export Successful", description: "Assignment calendar exported as ICS file" });
   };
 
   const exportAssignmentsCSV = () => {
@@ -535,16 +546,29 @@ export default function SettingsPage() {
                 <Label htmlFor="grade-alerts">Grade Change Alerts</Label>
                 <p className="text-sm text-muted-foreground">Get notified when your grades change</p>
               </div>
-              <Switch id="grade-alerts" disabled data-testid="switch-grade-alerts" />
+              <Switch
+                id="grade-alerts"
+                checked={notificationSettings.gradeChangeAlerts}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, gradeChangeAlerts: checked })
+                }
+                data-testid="switch-grade-alerts"
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="assignment-reminders">Assignment Reminders</Label>
                 <p className="text-sm text-muted-foreground">Remind me about upcoming due dates</p>
               </div>
-              <Switch id="assignment-reminders" disabled data-testid="switch-reminders" />
+              <Switch
+                id="assignment-reminders"
+                checked={notificationSettings.assignmentReminders}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, assignmentReminders: checked })
+                }
+                data-testid="switch-reminders"
+              />
             </div>
-            <p className="text-xs text-muted-foreground">Notification features coming soon</p>
           </CardContent>
         </Card>
 
@@ -614,6 +638,16 @@ export default function SettingsPage() {
               </div>
               <Button onClick={exportAssignmentsCSV} variant="outline" data-testid="button-export-assignments">
                 <FileText className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Export to Calendar</p>
+                <p className="text-sm text-muted-foreground">Download assignment due dates as an ICS calendar file</p>
+              </div>
+              <Button onClick={exportCalendarICS} variant="outline" data-testid="button-export-calendar">
+                <CalendarDays className="mr-2 h-4 w-4" />
                 Export
               </Button>
             </div>

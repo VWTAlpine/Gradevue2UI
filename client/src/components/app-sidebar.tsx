@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGrades } from "@/lib/gradeContext";
 import { getGradeBgColor } from "@shared/schema";
-import { calculateOverallGPA } from "@/lib/grade-utils";
+import { calculateOverallGPA, isCourseUngraded } from "@/lib/grade-utils";
 import {
   LayoutDashboard,
   FileText,
@@ -176,6 +176,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {gradebook.courses.map((course, index) => {
                   const isCourseActive = location === `/course/${index}`;
+                  const ungraded = isCourseUngraded(course);
                   return (
                     <SidebarMenuItem key={course.id || index}>
                       <SidebarMenuButton
@@ -191,9 +192,9 @@ export function AppSidebar() {
                           <span className="truncate text-sm">{course.name}</span>
                           <Badge
                             variant="secondary"
-                            className={`ml-auto shrink-0 ${getGradeBgColor(course.letterGrade)}`}
+                            className={`ml-auto shrink-0 ${ungraded ? "bg-muted text-muted-foreground" : getGradeBgColor(course.letterGrade)}`}
                           >
-                            {course.letterGrade}
+                            {ungraded ? "N/A" : course.letterGrade}
                           </Badge>
                         </Link>
                       </SidebarMenuButton>

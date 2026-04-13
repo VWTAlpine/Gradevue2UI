@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Course } from "@shared/schema";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
-import { countMissingAssignments } from "@/lib/grade-utils";
+import { countMissingAssignments, isCourseUngraded } from "@/lib/grade-utils";
 import { ChevronRight, AlertTriangle, MapPin } from "lucide-react";
 
 interface GradeCardProps {
@@ -14,7 +14,7 @@ interface GradeCardProps {
 }
 
 export function GradeCard({ course, index, onSelect }: GradeCardProps) {
-  const gradePercentage = course.grade ?? 0;
+  const ungraded = isCourseUngraded(course);
   const missingCount = countMissingAssignments(course);
 
   return (
@@ -33,9 +33,9 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
             </Badge>
           )}
           <Badge
-            className={`text-sm font-bold ${getGradeBgColor(course.letterGrade)}`}
+            className={`text-sm font-bold ${ungraded ? "bg-muted text-muted-foreground" : getGradeBgColor(course.letterGrade)}`}
           >
-            {course.letterGrade}
+            {ungraded ? "N/A" : course.letterGrade}
           </Badge>
         </div>
       </CardHeader>
@@ -53,9 +53,15 @@ export function GradeCard({ course, index, onSelect }: GradeCardProps) {
 
         <div className="flex items-baseline justify-between gap-2 pt-2">
           <span className="text-sm text-muted-foreground">Current Grade:</span>
-          <span className={`text-3xl font-bold ${getGradeColor(course.letterGrade)}`} data-testid={`grade-percentage-${index}`}>
-            {gradePercentage.toFixed(1)}%
-          </span>
+          {ungraded ? (
+            <span className="text-3xl font-bold text-muted-foreground" data-testid={`grade-percentage-${index}`}>
+              N/A
+            </span>
+          ) : (
+            <span className={`text-3xl font-bold ${getGradeColor(course.letterGrade)}`} data-testid={`grade-percentage-${index}`}>
+              {(course.grade ?? 0).toFixed(1)}%
+            </span>
+          )}
         </div>
 
         <div className="pt-3 border-t">

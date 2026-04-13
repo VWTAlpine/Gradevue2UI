@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
 ### Key Design Patterns
 - **Provider Pattern**: Used extensively for context (GradeProvider, ThemeProvider, SidebarProvider)
 - **Protected Routes**: Authentication check before rendering authenticated pages
+- **Ungraded Course Detection**: `isCourseUngraded(course)` in `grade-utils.ts` checks if a course has grade=null or grade=0 with no graded assignments — used to show "N/A" instead of "0.0%" and exclude from GPA/average calculations
 - **Component Composition**: Reusable UI components (StatCard, GradeCard, AssignmentRow) for consistent layouts
 - **Shared Utilities**: `client/src/lib/grade-utils.ts` centralizes GPA calculation, score parsing, missing assignment detection, and grade color mapping — used across dashboard, sidebar, assignment-row, course-detail, and grade-card
 
@@ -45,13 +46,20 @@ Preferred communication style: Simple, everyday language.
 2. **Hybrid Authentication**: Client-side SOAP requests attempted first for performance, with automatic server-side fallback using studentvue npm package
 3. Parsed gradebook data stored in React context
 4. All authenticated pages read from context for grade display
-5. Grade changes are tracked for notifications
+5. Grade changes are tracked for notifications (controlled by notification settings in localStorage)
+6. **Reporting Period Switching**: `POST /api/studentvue/gradebook` endpoint accepts `reportingPeriodIndex` to fetch different grading periods; dashboard shows period selector pills when multiple periods are available
 
 ### Authentication Details
 - **Client-side**: Direct SOAP XML requests to StudentVue API for faster response
 - **Server fallback**: Uses `studentvue` npm package when client requests fail (CORS restrictions, etc.)
 - **Assignment fallback**: If client-side login succeeds but no assignments are found, automatically tries server-side parsing for better data extraction
 - Credentials stored in React context for session duration
+
+### Notification & Export Features
+- **Notification Settings**: Grade change alerts and assignment reminders toggles stored in localStorage (`notificationSettings` key), managed via `GradeProvider` context
+- **Calendar Export**: `generateICSCalendar()` in `grade-utils.ts` creates ICS files from assignment due dates for import into external calendar apps
+- **CSV Export**: Grades summary and detailed assignments exportable as CSV files
+- **PWA / Offline**: Service worker (`client/public/sw.js`) caches static assets for offline shell access; API requests are not cached to protect sensitive student data
 
 ### Attendance Tracking
 - StudentVue only reports absence/tardy events, not present days

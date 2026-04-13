@@ -14,6 +14,7 @@ import {
   getAssignmentPoints,
   isAssignmentMissing,
   getGradeHexColor,
+  isCourseUngraded,
 } from "@/lib/grade-utils";
 import { AlertTriangle, ArrowLeft, User, MapPin, FileText, BarChart3, LineChart, FlaskConical, Plus, X } from "lucide-react";
 import { useState } from "react";
@@ -260,6 +261,7 @@ export default function CourseDetailPage() {
     return result;
   }, [course]);
 
+  const ungraded = course ? isCourseUngraded(course) : false;
   const displayGrade = course?.grade ?? 0;
   const displayLetter = course?.letterGrade ?? "N/A";
 
@@ -360,12 +362,21 @@ export default function CourseDetailPage() {
                 </div>
               )}
               <div className="text-right" data-testid="course-grade-summary">
-                <p className={`text-2xl font-bold ${getGradeColor(displayLetter)}`} data-testid="text-course-grade">
-                  {displayGrade.toFixed(1)}%
-                </p>
-                <Badge className={`${getGradeBgColor(displayLetter)}`} data-testid="badge-course-letter">
-                  {displayLetter}
-                </Badge>
+                {ungraded ? (
+                  <>
+                    <p className="text-2xl font-bold text-muted-foreground" data-testid="text-course-grade">N/A</p>
+                    <Badge className="bg-muted text-muted-foreground" data-testid="badge-course-letter">N/A</Badge>
+                  </>
+                ) : (
+                  <>
+                    <p className={`text-2xl font-bold ${getGradeColor(displayLetter)}`} data-testid="text-course-grade">
+                      {displayGrade.toFixed(1)}%
+                    </p>
+                    <Badge className={`${getGradeBgColor(displayLetter)}`} data-testid="badge-course-letter">
+                      {displayLetter}
+                    </Badge>
+                  </>
+                )}
               </div>
             </div>
           </div>

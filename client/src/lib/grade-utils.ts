@@ -102,6 +102,20 @@ export function getAssignmentPoints(a: Assignment): { earned: number; possible: 
   return null;
 }
 
+export function isCourseUngraded(course: Course): boolean {
+  if (course.grade === null) return true;
+
+  if (course.grade === 0) {
+    const hasAnyGradedAssignment = course.assignments.some(a => {
+      const points = getAssignmentPoints(a);
+      return points !== null && points.possible > 0;
+    });
+    return !hasAnyGradedAssignment;
+  }
+
+  return false;
+}
+
 export function isExplicitlyMissing(a: Assignment): boolean {
   const scoreLower = (a.score || "").toLowerCase();
   const notesLower = (a.notes || "").toLowerCase();
@@ -152,14 +166,14 @@ export function percentageToGPA(grade: number): number {
 }
 
 export function calculateOverallGPA(courses: Course[]): number {
-  const validGrades = courses.filter((c) => c.grade !== null);
+  const validGrades = courses.filter((c) => c.grade !== null && !isCourseUngraded(c));
   if (validGrades.length === 0) return 0;
   const totalPoints = validGrades.reduce((sum, c) => sum + percentageToGPA(c.grade ?? 0), 0);
   return totalPoints / validGrades.length;
 }
 
 export function calculateAverageGrade(courses: Course[]): number {
-  const validGrades = courses.filter((c) => c.grade !== null);
+  const validGrades = courses.filter((c) => c.grade !== null && !isCourseUngraded(c));
   if (validGrades.length === 0) return 0;
   return validGrades.reduce((acc, c) => acc + (c.grade ?? 0), 0) / validGrades.length;
 }
@@ -212,4 +226,64 @@ export function getLetterFromPercentage(pct: number | null): string {
   if (pct >= 63) return "D";
   if (pct >= 60) return "D-";
   return "F";
+}
+
+function escapeICSText(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function formatLocalDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
+
+export function generateICSCalendar(courses: Course[]): string {
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//GradeVue//Assignments//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ];
+
+  for (const course of courses) {
+    for (const assignment of course.assignments) {
+      if (!assignment.dueDate) continue;
+      const dueDate = new Date(assignment.dueDate);
+      if (isNaN(dueDate.getTime())) continue;
+
+      const startDate = formatLocalDate(dueDate);
+      const nextDay = new Date(dueDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const endDate = formatLocalDate(nextDay);
+
+      const uid = `${course.id}-${assignment.name.replace(/\s+/g, "-").slice(0, 30)}-${startDate}@gradevue`;
+      const summary = escapeICSText(`${assignment.name} - ${course.name}`);
+      const description = escapeICSText([
+        `Course: ${course.name}`,
+        `Teacher: ${course.teacher}`,
+        assignment.type ? `Type: ${assignment.type}` : "",
+        assignment.score && assignment.score !== "Not Graded" ? `Score: ${assignment.score}` : "",
+      ].filter(Boolean).join("\n"));
+
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTART;VALUE=DATE:${startDate}`,
+        `DTEND;VALUE=DATE:${endDate}`,
+        `SUMMARY:${summary}`,
+        `DESCRIPTION:${description}`,
+        "END:VEVENT",
+      );
+    }
+  }
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
 }
