@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useLocation } from "wouter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
 import { getBarColorFromLetter } from "@/lib/grade-utils";
-import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X } from "lucide-react";
+import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Loader2, ExternalLink } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -43,6 +44,7 @@ import {
 type ViewMode = "list" | "chart";
 
 export default function AssignmentsPage() {
+  const [, setLocation] = useLocation();
   const { 
     gradebook, 
     hypotheticalGradebook,
@@ -53,7 +55,12 @@ export default function AssignmentsPage() {
     addHypotheticalAssignment,
     removeHypotheticalAssignment,
     clearAllOverrides,
+    selectedPeriodIndex,
+    switchReportingPeriod,
+    isLoading,
   } = useGrades();
+
+  const reportingPeriods = gradebook?.reportingPeriods || [];
   
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all");
@@ -196,6 +203,27 @@ export default function AssignmentsPage() {
         </Card>
       )}
 
+      {reportingPeriods.length > 1 && (
+        <div className="flex flex-wrap gap-2" data-testid="period-selector">
+          {reportingPeriods.map((period, idx) => (
+            <Button
+              key={period.name || idx}
+              variant={selectedPeriodIndex === idx ? "default" : "outline"}
+              size="sm"
+              onClick={() => switchReportingPeriod(idx)}
+              disabled={isLoading}
+              className="gap-1.5"
+              data-testid={`button-period-${idx}`}
+            >
+              {isLoading && selectedPeriodIndex === idx && (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+              {period.name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button
           variant={selectedCourseFilter === "all" ? "default" : "outline"}
@@ -255,8 +283,15 @@ export default function AssignmentsPage() {
                               <ChevronRight className="h-5 w-5 text-muted-foreground" />
                             )}
                             <div>
-                              <div className="flex items-center gap-2">
-                                <CardTitle className="text-lg" data-testid={`course-name-${index}`}>{course.name}</CardTitle>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                  className="text-lg font-semibold text-left hover:underline flex items-center gap-1.5 group"
+                                  onClick={(e) => { e.stopPropagation(); setLocation(`/course/${actualIndex}`); }}
+                                  data-testid={`course-name-link-${index}`}
+                                >
+                                  <span data-testid={`course-name-${index}`}>{course.name}</span>
+                                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
                                 {hasChanges && (
                                   <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                                     Modified

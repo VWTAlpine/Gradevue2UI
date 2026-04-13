@@ -32,17 +32,15 @@ export function PWAInstallButton({
     );
   }
 
-  if (!isInstallable) {
-    return null;
-  }
-
   return (
     <Button
       variant={variant}
       size={size}
-      onClick={promptInstall}
+      onClick={isInstallable ? promptInstall : undefined}
+      disabled={!isInstallable}
       className={`gap-2 ${className}`}
-      data-testid="button-pwa-install"
+      data-testid={isInstallable ? "button-pwa-install" : "button-pwa-unavailable"}
+      title={isInstallable ? "Install GradeVue as an app" : "Open this page in Chrome or Edge to install"}
     >
       <Download className="h-4 w-4" />
       {showLabel && <span className="hidden sm:inline">Install App</span>}

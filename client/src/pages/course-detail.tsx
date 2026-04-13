@@ -530,6 +530,59 @@ export default function CourseDetailPage() {
         </CardContent>
       </Card>
 
+      {!ungraded && (() => {
+        const prediction = predictFinalGrade(course);
+        if (!prediction) return null;
+        const confidenceColor =
+          prediction.confidence === "High"
+            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+            : prediction.confidence === "Medium"
+            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+            : "bg-muted text-muted-foreground";
+        return (
+          <Card className="overflow-visible" data-testid="card-grade-prediction">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <CardTitle className="text-base">Predicted Final Grade</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p
+                    className="text-3xl font-bold"
+                    style={{ color: getGradeHexColor(prediction.predictedGrade) }}
+                    data-testid="text-predicted-grade"
+                  >
+                    {prediction.predictedGrade.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1" data-testid="text-prediction-driver">
+                    {prediction.driverExplanation}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge
+                    variant="secondary"
+                    className={`text-sm px-3 py-1 ${getGradeBgColor(prediction.predictedLetter)}`}
+                    data-testid="badge-predicted-letter"
+                  >
+                    {prediction.predictedLetter}
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className={confidenceColor}
+                    data-testid="badge-prediction-confidence"
+                  >
+                    {prediction.confidence} confidence
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <FlaskConical className={`h-4 w-4 ${hypotheticalMode ? "text-purple-500" : "text-muted-foreground"}`} />
@@ -694,60 +747,6 @@ export default function CourseDetailPage() {
       )}
 
       <CategoryBreakdownCompact categories={computedCategories} />
-
-      {(() => {
-        if (ungraded) return null;
-        const prediction = predictFinalGrade(course);
-        if (!prediction) return null;
-        const confidenceColor =
-          prediction.confidence === "High"
-            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-            : prediction.confidence === "Medium"
-            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-            : "bg-muted text-muted-foreground";
-        return (
-          <Card className="overflow-visible" data-testid="card-grade-prediction">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                <BrainCircuit className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-              </div>
-              <CardTitle className="text-base">Predicted Final Grade</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p
-                    className="text-3xl font-bold"
-                    style={{ color: getGradeHexColor(prediction.predictedGrade) }}
-                    data-testid="text-predicted-grade"
-                  >
-                    {prediction.predictedGrade.toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1" data-testid="text-prediction-driver">
-                    {prediction.driverExplanation}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge
-                    variant="secondary"
-                    className={`text-sm px-3 py-1 ${getGradeBgColor(prediction.predictedLetter)}`}
-                    data-testid="badge-predicted-letter"
-                  >
-                    {prediction.predictedLetter}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className={confidenceColor}
-                    data-testid="badge-prediction-confidence"
-                  >
-                    {prediction.confidence} confidence
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
 
       {missingAssignments.length > 0 && (
         <Alert variant="destructive" data-testid="alert-missing-assignments">
