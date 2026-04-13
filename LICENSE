@@ -1,5 +1,40 @@
-Licensed under the GNU GPLv3, available at https://www.gnu.org/licenses/gpl-3.0.en.html 
+GradeVue
+Copyright (C) 2026 VWTAlpine. All rights reserved.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+Licensed under GNU GPLv3, full notice available at https://www.gnu.org/licenses/gpl-3.0.en.html 
+---
+AUTHORSHIP NOTICE
+The system architecture, product concept, user interface design, feature
+specifications, control flow, and application logic were designed and
+authored by VWTAlpine. AI tooling (Replit) was used as an implementation
+assistant, generating code fragments in response to explicit human-provided
+specifications. The use of AI assistance does not diminish authorship,
+ownership, or copyright in the resulting work.
+---
+THIRD-PARTY CREDITS
+SOAP Request Structure & StudentVue API Integration
+  Portions of the StudentVue SOAP client (client/src/lib/studentvue-client.ts)
+  are based on work by Connor Rakov. Used with reference and credit.
+studentvue npm package
+  Author: Joseph Marbella
+  License: MIT
+  Used server-side as a fallback for fetching gradebook data from
+  StudentVue-compatible school district servers.
+shadcn/ui
+  Source: https://github.com/shadcn-ui/ui
+  License: MIT
+  UI component library used throughout the application interface.
+Radix UI Primitives
+  Source: https://github.com/radix-ui/primitives
+  License: MIT
+  Accessible, unstyled component primitives underlying shadcn/ui components.
+All other dependencies are open-source packages listed in package.json,
+each distributed under their respective licenses (primarily MIT).
 
+___
 
 Unauthorized use is strictly prohibited.
 
