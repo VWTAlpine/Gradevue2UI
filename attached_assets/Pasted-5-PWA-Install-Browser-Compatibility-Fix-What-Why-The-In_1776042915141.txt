@@ -1,0 +1,30 @@
+5 - PWA Install – Browser Compatibility Fix
+What & Why
+The "Install App" / download button currently disappears entirely on browsers that don't support beforeinstallprompt (Firefox, Safari on macOS, some Chromium builds). Users on those browsers get no guidance at all.
+
+There is also a Chromium-specific race condition: beforeinstallprompt can fire before React mounts the hook that listens for it, silently swallowing the event and leaving the install button invisible even in a fully-compatible browser. The fix (sourced from the Chromium PWA GitHub tracker and community PRs) is to capture the event synchronously in a global inline script in index.html before the app bundle loads, stash it on window, and have the hook pick it up from there on mount.
+
+Both fixes should be credited in the in-app credits/about section alongside the relevant GitHub references.
+
+Done looks like
+On Chromium-based browsers (Chrome, Edge, Opera, Brave): install button reliably appears without missing the beforeinstallprompt event due to the race condition.
+On Firefox, Safari (macOS), and other browsers that never fire beforeinstallprompt: instead of showing nothing, the install button area shows a small informational fallback — e.g., a tooltip/popover or a brief message — that explains how to add the app from that browser's native menu (e.g., "Use your browser's menu → Add to Home Screen / Install").
+On iOS Safari: shows an iOS-specific prompt ("Tap the Share button, then 'Add to Home Screen'").
+When already installed (standalone mode): continues to show the "Installed" badge as before.
+The credits/about section (wherever existing credits are displayed) includes attribution to the relevant Chromium bug fix PRs.
+Out of scope
+Building a full browser-detection library or polyfill.
+Changing the overall settings page layout beyond the install card.
+Any other notification or data-refresh logic.
+Tasks
+Capture beforeinstallprompt early — In index.html, add a small inline <script> before the app module that listens for beforeinstallprompt immediately and stores the event on window.__pwaInstallPrompt. Update the usePWAInstall hook to check window.__pwaInstallPrompt on mount before registering the event listener, so events that fired before React mounted are not lost.
+
+Unsupported-browser fallback UI — Update PWAInstallButton (and the equivalent logic in settings.tsx) so that when isInstallable is false and the app is not already installed, instead of returning null, it renders a contextual fallback. Detect the browser family (Chromium, Firefox, Safari/iOS) using lightweight UA/feature checks and show the appropriate short instruction (popover or inline hint). On iOS, show the Share-then-Add-to-Home-Screen tip.
+
+Credits attribution — In the existing credits/about UI (identified in Task #1's scope), add an entry crediting the Chromium PWA beforeinstallprompt early-capture pattern, referencing the relevant Chromium bug report and any community GitHub PRs that informed the fix.
+
+Relevant files
+client/index.html
+client/src/hooks/use-pwa-install.ts
+client/src/components/pwa-install-button.tsx
+client/src/pages/settings.tsx:39-78
