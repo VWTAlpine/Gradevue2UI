@@ -15,61 +15,76 @@ declare global {
   }
 }
 
+let _deferredPrompt: BeforeInstallPromptEvent | null = null;
+let _isInstalled = false;
+let _listenersRegistered = false;
+const _subscribers: Array<() => void> = [];
+
+function notifySubscribers() {
+  _subscribers.forEach(fn => fn());
+}
+
+function ensureListenersRegistered() {
+  if (_listenersRegistered) return;
+  _listenersRegistered = true;
+
+  if (typeof window === "undefined") return;
+
+  if (window.matchMedia("(display-mode: standalone)").matches) {
+    _isInstalled = true;
+    return;
+  }
+
+  window.addEventListener("beforeinstallprompt", (e: BeforeInstallPromptEvent) => {
+    e.preventDefault();
+    _deferredPrompt = e;
+    notifySubscribers();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    _isInstalled = true;
+    _deferredPrompt = null;
+    notifySubscribers();
+  });
+}
+
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
+    ensureListenersRegistered();
 
-    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setIsInstallable(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
+    const update = () => forceUpdate(n => n + 1);
+    _subscribers.push(update);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
+      const idx = _subscribers.indexOf(update);
+      if (idx !== -1) _subscribers.splice(idx, 1);
     };
   }, []);
 
   const promptInstall = async (): Promise<boolean> => {
-    if (!deferredPrompt) return false;
-
+    if (!_deferredPrompt) return false;
     try {
-      await deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      
-      if (choiceResult.outcome === "accepted") {
-        setIsInstalled(true);
-        setIsInstallable(false);
+      await _deferredPrompt.prompt();
+      const { outcome } = await _deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        _isInstalled = true;
+        _deferredPrompt = null;
+        notifySubscribers();
+      } else {
+        _deferredPrompt = null;
       }
-      
-      setDeferredPrompt(null);
-      return choiceResult.outcome === "accepted";
-    } catch (error) {
-      console.error("Error prompting install:", error);
+      return outcome === "accepted";
+    } catch (err) {
+      console.error("PWA install error:", err);
       return false;
     }
   };
 
   return {
-    isInstallable,
-    isInstalled,
+    isInstallable: !_isInstalled && _deferredPrompt !== null,
+    isInstalled: _isInstalled,
     promptInstall,
   };
 }

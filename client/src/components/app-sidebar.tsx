@@ -45,6 +45,11 @@ const mainNavItems = [
     icon: FileText,
   },
   {
+    title: "Deadlines",
+    url: "/deadlines",
+    icon: Clock,
+  },
+  {
     title: "GPA Calculator",
     url: "/gpa",
     icon: Calculator,
@@ -53,11 +58,6 @@ const mainNavItems = [
     title: "Attendance",
     url: "/attendance",
     icon: Calendar,
-  },
-  {
-    title: "Deadlines",
-    url: "/deadlines",
-    icon: Clock,
   },
   {
     title: "Documents",

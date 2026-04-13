@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,11 +15,7 @@ import {
 } from "lucide-react";
 import { generateICSCalendar } from "@/lib/grade-utils";
 import { SiGithub } from "react-icons/si";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { PWAInstallButton } from "@/components/pwa-install-button";
 
 function hexToHsl(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -148,40 +144,6 @@ export default function SettingsPage() {
   const [editingCustom, setEditingCustom] = useState<"custom1" | "custom2" | "custom3" | null>(null);
   const [customHex, setCustomHex] = useState("#3b82f6");
   const [customName, setCustomName] = useState("");
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [canInstall, setCanInstall] = useState(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setCanInstall(true);
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-  }, []);
-
-  const handleInstallPWA = async () => {
-    if (!deferredPrompt) {
-      toast({
-        title: "Installation Not Available",
-        description: "Your browser doesn't support app installation, or the app is already installed.",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        toast({ title: "App Installed", description: "GradeVue has been installed to your device" });
-        setCanInstall(false);
-        setDeferredPrompt(null);
-      }
-    } catch (error) {
-      console.error("PWA install error:", error);
-    }
-  };
 
   const handleRefresh = async () => {
     if (!credentials || credentials.district === "demo") {
@@ -335,7 +297,7 @@ export default function SettingsPage() {
               <CardDescription>Customize how GradeVue looks on your device</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-8">
+          <CardContent className="space-y-5">
             <ThemePreview />
 
             <div className="space-y-3">
@@ -670,16 +632,11 @@ export default function SettingsPage() {
                 <p className="font-medium">Install as Web App</p>
                 <p className="text-sm text-muted-foreground">Add GradeVue to your home screen for quick access</p>
               </div>
-              <Button onClick={handleInstallPWA} variant="outline" disabled={!canInstall} data-testid="button-install-pwa">
-                <Smartphone className="mr-2 h-4 w-4" />
-                Install
-              </Button>
+              <div data-testid="button-install-pwa"><PWAInstallButton size="default" /></div>
             </div>
-            {!canInstall && (
-              <p className="text-xs text-muted-foreground">
-                App installation is available when using a supported browser. If you've already installed the app, this option won't appear.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              The Install button appears when your browser supports app installation. If the button is missing, you may have already installed GradeVue or your browser doesn't support it.
+            </p>
           </CardContent>
         </Card>
 
