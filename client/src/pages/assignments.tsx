@@ -305,15 +305,17 @@ export default function AssignmentsPage() {
                             <Badge className={getGradeBgColor(course.letterGrade)} data-testid={`course-letter-${index}`}>
                               {course.letterGrade}
                             </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-7 px-2 mt-0.5"
-                              onClick={(e) => { e.stopPropagation(); setLocation(`/course/${actualIndex}`); }}
-                              data-testid={`button-go-to-course-${index}`}
-                            >
-                              Go to Course
-                            </Button>
+                            {actualIndex >= 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7 px-2 mt-0.5"
+                                onClick={(e) => { e.stopPropagation(); setLocation(`/course/${actualIndex}`); }}
+                                data-testid={`button-go-to-course-${index}`}
+                              >
+                                Go to Course
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardHeader>

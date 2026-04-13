@@ -350,6 +350,8 @@ export function GradeProvider({ children }: { children: ReactNode }) {
             studentInfo: data.data.studentInfo || gradebook?.studentInfo,
           };
           setGradebookState(updatedData);
+        } else {
+          setSelectedPeriodIndex(0);
         }
       } catch {
         // Silently fall back to just swapping period label if fetch fails
