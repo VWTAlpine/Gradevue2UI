@@ -116,7 +116,10 @@ export default function CourseDetailPage() {
     }
   }, [courseId, courses, selectedCourse, setSelectedCourse]);
 
-  const course = courseId ? courses[parseInt(courseId)] : selectedCourse;
+  const parsedCourseIdx = courseId ? parseInt(courseId) : NaN;
+  const course = !isNaN(parsedCourseIdx) && parsedCourseIdx >= 0 && parsedCourseIdx < courses.length
+    ? courses[parsedCourseIdx]
+    : (courseId ? undefined : selectedCourse);
 
   // Calculate category scores from assignments if API returns 0
   const computedCategories = useMemo(() => {

@@ -200,12 +200,9 @@ export function GradeProvider({ children }: { children: ReactNode }) {
               }
             }
             
-            if (!matchedCategory) {
-              for (const cat of course.categories!) {
-                matchedCategory = cat.name.toLowerCase();
-                break;
-              }
-            }
+            // If no category matched, skip this assignment rather than
+            // silently attributing its points to the first category, which
+            // would produce incorrect hypothetical grade calculations.
 
             if (matchedCategory && categoryTotals.has(matchedCategory)) {
               const current = categoryTotals.get(matchedCategory)!;
@@ -270,7 +267,8 @@ export function GradeProvider({ children }: { children: ReactNode }) {
       const oldCourse = oldGradebook.courses?.find((c) => c.id === newCourse.id);
       if (!oldCourse) return;
 
-      const gradeChanged = oldCourse.grade !== newCourse.grade;
+      const gradeDelta = Math.abs((newCourse.grade ?? 0) - (oldCourse.grade ?? 0));
+      const gradeChanged = gradeDelta >= 0.05;
       const letterChanged = oldCourse.letterGrade !== newCourse.letterGrade;
 
       if (gradeChanged || letterChanged) {
