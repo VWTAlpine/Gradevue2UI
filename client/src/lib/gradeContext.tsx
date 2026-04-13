@@ -340,16 +340,25 @@ export function GradeProvider({ children }: { children: ReactNode }) {
 
     if (credentials.district === "demo") {
       setSelectedPeriodIndex(index);
-      if (gradebook?.reportingPeriods && gradebook.reportingPeriods[index]) {
-        const period = gradebook.reportingPeriods[index];
-        setGradebookState({
-          ...gradebook,
-          reportingPeriod: {
-            name: period.name,
-            startDate: period.startDate,
-            endDate: period.endDate,
-          },
-        });
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/studentvue/demo?period=${index}`);
+        const data = await response.json();
+        if (data.success && data.data) {
+          const updatedData = {
+            ...data.data,
+            studentInfo: data.data.studentInfo || gradebook?.studentInfo,
+          };
+          setGradebookState(updatedData);
+        }
+      } catch {
+        // Silently fall back to just swapping period label if fetch fails
+        if (gradebook?.reportingPeriods?.[index]) {
+          const period = gradebook.reportingPeriods[index];
+          setGradebookState({ ...gradebook, reportingPeriod: { name: period.name, startDate: period.startDate, endDate: period.endDate } });
+        }
+      } finally {
+        setIsLoading(false);
       }
       return;
     }

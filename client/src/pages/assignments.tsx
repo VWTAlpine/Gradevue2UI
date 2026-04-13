@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
 import { getBarColorFromLetter } from "@/lib/grade-utils";
-import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Loader2, ExternalLink } from "lucide-react";
+import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -284,14 +284,9 @@ export default function AssignmentsPage() {
                             )}
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <button
-                                  className="text-lg font-semibold text-left hover:underline flex items-center gap-1.5 group"
-                                  onClick={(e) => { e.stopPropagation(); setLocation(`/course/${actualIndex}`); }}
-                                  data-testid={`course-name-link-${index}`}
-                                >
-                                  <span data-testid={`course-name-${index}`}>{course.name}</span>
-                                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
+                                <p className="text-lg font-semibold" data-testid={`course-name-${index}`}>
+                                  {course.name}
+                                </p>
                                 {hasChanges && (
                                   <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                                     Modified
@@ -303,13 +298,22 @@ export default function AssignmentsPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="text-right" data-testid={`course-grade-${index}`}>
+                          <div className="flex flex-col items-end gap-1.5" data-testid={`course-grade-${index}`}>
                             <p className={`text-2xl font-bold ${getGradeColor(course.letterGrade)}`} data-testid={`course-percentage-${index}`}>
                               {course.grade?.toFixed(1)}%
                             </p>
                             <Badge className={getGradeBgColor(course.letterGrade)} data-testid={`course-letter-${index}`}>
                               {course.letterGrade}
                             </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-7 px-2 mt-0.5"
+                              onClick={(e) => { e.stopPropagation(); setLocation(`/course/${actualIndex}`); }}
+                              data-testid={`button-go-to-course-${index}`}
+                            >
+                              Go to Course
+                            </Button>
                           </div>
                         </div>
                       </CardHeader>

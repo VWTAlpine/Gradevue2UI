@@ -332,6 +332,11 @@ export default function DashboardPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Current: {(course.grade ?? 0).toFixed(1)}% ({course.letterGrade})
                     </p>
+                    {prediction!.driverExplanation && (
+                      <p className="text-xs text-muted-foreground italic mt-0.5" data-testid={`prediction-why-${course.id}`}>
+                        {prediction!.driverExplanation}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 ml-3 shrink-0">
                     <Badge

@@ -11,6 +11,14 @@ const loginRateLimiter = rateLimit({
   message: { success: false, error: "Too many login attempts. Please wait a minute before trying again." },
 });
 
+const gradebookRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many gradebook requests. Please wait a moment before trying again." },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -253,7 +261,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/studentvue/gradebook", loginRateLimiter, async (req, res) => {
+  app.post("/api/studentvue/gradebook", gradebookRateLimiter, async (req, res) => {
     try {
       const { district, username, password, reportingPeriodIndex } = req.body;
 
@@ -340,7 +348,8 @@ export async function registerRoutes(
 
   // Demo data endpoint
   app.get("/api/studentvue/demo", (req, res) => {
-    const demoData = generateDemoData();
+    const periodIndex = parseInt((req.query.period as string) || "0") || 0;
+    const demoData = generateDemoData(periodIndex);
     return res.json({ 
       success: true, 
       data: demoData 
@@ -773,8 +782,33 @@ function parseGradebook(gradebook: any, studentInfo: any = null) {
   };
 }
 
-// Generate realistic demo data
-function generateDemoData() {
+// Deterministic per-course grade offset for alternate reporting periods.
+// offsets[periodIndex][courseIndex] — applied as an additive shift to base grades.
+const PERIOD_GRADE_OFFSETS: number[][] = [
+  [0,    0,    0,    0,    0,    0,    0   ], // period 0 (Fall)   — baseline
+  [-3.8, +2.1, +4.5, -1.2, +1.7, -2.3, 0  ], // period 1 (Spring) — earlier term, slightly different
+];
+
+function clampGrade(g: number) { return Math.min(100, Math.max(0, Math.round(g * 10) / 10)); }
+function letterFromGrade(g: number) {
+  if (g >= 97) return "A+"; if (g >= 93) return "A"; if (g >= 90) return "A-";
+  if (g >= 87) return "B+"; if (g >= 83) return "B"; if (g >= 80) return "B-";
+  if (g >= 77) return "C+"; if (g >= 73) return "C"; if (g >= 70) return "C-";
+  if (g >= 67) return "D+"; if (g >= 63) return "D"; if (g >= 60) return "D-";
+  return "F";
+}
+
+// Generate realistic demo data, optionally shifted for a different reporting period
+function generateDemoData(periodIndex: number = 0) {
+  const offsets = PERIOD_GRADE_OFFSETS[periodIndex] || PERIOD_GRADE_OFFSETS[0];
+
+  const periodMeta = periodIndex === 1
+    ? { name: "Spring Semester 2024", startDate: "Jan 8, 2024", endDate: "May 24, 2024" }
+    : { name: "Fall Semester 2024",   startDate: "Aug 26, 2024", endDate: "Dec 20, 2024" };
+
+  const baseGrades = [92.5, 88.3, 85.7, 94.2, 91.8, 87.4];
+  const shiftedGrades = baseGrades.map((g, i) => clampGrade(g + (offsets[i] ?? 0)));
+
   const courses = [
     {
       id: "course-0",
@@ -782,49 +816,21 @@ function generateDemoData() {
       period: 1,
       teacher: "Ms. Rodriguez",
       room: "201",
-      grade: 92.5,
-      letterGrade: "A-",
-      assignments: [
-        {
-          name: "Unit 5 Test - Integration",
-          type: "Tests",
-          date: "Nov 29, 2024",
-          dueDate: "Dec 6, 2024",
-          score: "95 out of 100",
-          points: "95/100",
-          notes: "",
-        },
-        {
-          name: "Quiz: Derivatives",
-          type: "Quizzes",
-          date: "Nov 26, 2024",
-          dueDate: "Nov 30, 2024",
-          score: "28 out of 30",
-          points: "28/30",
-          notes: "",
-        },
-        {
-          name: "Homework Set 12",
-          type: "Homework",
-          date: "Dec 3, 2024",
-          dueDate: "Dec 7, 2024",
-          score: "19 out of 20",
-          points: "19/20",
-          notes: "",
-        },
-        {
-          name: "Unit 6 Test - Applications",
-          type: "Tests",
-          date: "Dec 10, 2024",
-          dueDate: "Dec 15, 2024",
-          score: "Not Graded",
-          points: "0/100",
-          notes: "",
-        },
+      grade: shiftedGrades[0],
+      letterGrade: letterFromGrade(shiftedGrades[0]),
+      assignments: periodIndex === 1 ? [
+        { name: "Limits & Continuity Quiz", type: "Quizzes", date: "Feb 14, 2024", dueDate: "Feb 14, 2024", score: "27 out of 30", points: "27/30", notes: "" },
+        { name: "Derivatives Test", type: "Tests", date: "Mar 5, 2024", dueDate: "Mar 5, 2024", score: "86 out of 100", points: "86/100", notes: "" },
+        { name: "Homework Set 5", type: "Homework", date: "Mar 12, 2024", dueDate: "Mar 15, 2024", score: "20 out of 20", points: "20/20", notes: "" },
+      ] : [
+        { name: "Unit 5 Test - Integration", type: "Tests", date: "Nov 29, 2024", dueDate: "Dec 6, 2024", score: "95 out of 100", points: "95/100", notes: "" },
+        { name: "Quiz: Derivatives", type: "Quizzes", date: "Nov 26, 2024", dueDate: "Nov 30, 2024", score: "28 out of 30", points: "28/30", notes: "" },
+        { name: "Homework Set 12", type: "Homework", date: "Dec 3, 2024", dueDate: "Dec 7, 2024", score: "19 out of 20", points: "19/20", notes: "" },
+        { name: "Unit 6 Test - Applications", type: "Tests", date: "Dec 10, 2024", dueDate: "Dec 15, 2024", score: "Not Graded", points: "0/100", notes: "" },
       ],
       categories: [
-        { name: "Tests", weight: 40, score: 90, points: "360/400" },
-        { name: "Quizzes", weight: 30, score: 90, points: "270/300" },
+        { name: "Tests", weight: 40, score: clampGrade(90 + (offsets[0] ?? 0)), points: "360/400" },
+        { name: "Quizzes", weight: 30, score: clampGrade(90 + (offsets[0] ?? 0)), points: "270/300" },
         { name: "Homework", weight: 20, score: 95, points: "190/200" },
         { name: "Participation", weight: 10, score: 100, points: "100/100" },
       ],
@@ -835,39 +841,18 @@ function generateDemoData() {
       period: 2,
       teacher: "Mr. Thompson",
       room: "105",
-      grade: 88.3,
-      letterGrade: "B+",
-      assignments: [
-        {
-          name: "Hamlet Essay",
-          type: "Essays",
-          date: "Nov 20, 2024",
-          dueDate: "Dec 4, 2024",
-          score: "85 out of 100",
-          points: "85/100",
-          notes: "Good analysis, improve thesis",
-        },
-        {
-          name: "Reading Quiz - Act III",
-          type: "Reading Quizzes",
-          date: "Nov 25, 2024",
-          dueDate: "Nov 25, 2024",
-          score: "88 out of 100",
-          points: "88/100",
-          notes: "",
-        },
-        {
-          name: "Poetry Analysis",
-          type: "Essays",
-          date: "Dec 1, 2024",
-          dueDate: "Dec 8, 2024",
-          score: "92 out of 100",
-          points: "92/100",
-          notes: "",
-        },
+      grade: shiftedGrades[1],
+      letterGrade: letterFromGrade(shiftedGrades[1]),
+      assignments: periodIndex === 1 ? [
+        { name: "Great Gatsby Essay", type: "Essays", date: "Feb 20, 2024", dueDate: "Feb 27, 2024", score: "90 out of 100", points: "90/100", notes: "Strong thesis" },
+        { name: "Reading Quiz - Ch. 5", type: "Reading Quizzes", date: "Mar 1, 2024", dueDate: "Mar 1, 2024", score: "91 out of 100", points: "91/100", notes: "" },
+      ] : [
+        { name: "Hamlet Essay", type: "Essays", date: "Nov 20, 2024", dueDate: "Dec 4, 2024", score: "85 out of 100", points: "85/100", notes: "Good analysis, improve thesis" },
+        { name: "Reading Quiz - Act III", type: "Reading Quizzes", date: "Nov 25, 2024", dueDate: "Nov 25, 2024", score: "88 out of 100", points: "88/100", notes: "" },
+        { name: "Poetry Analysis", type: "Essays", date: "Dec 1, 2024", dueDate: "Dec 8, 2024", score: "92 out of 100", points: "92/100", notes: "" },
       ],
       categories: [
-        { name: "Essays", weight: 50, score: 88, points: "440/500" },
+        { name: "Essays", weight: 50, score: clampGrade(88 + (offsets[1] ?? 0)), points: "440/500" },
         { name: "Reading Quizzes", weight: 25, score: 88, points: "220/250" },
         { name: "Participation", weight: 25, score: 92, points: "230/250" },
       ],
@@ -878,40 +863,19 @@ function generateDemoData() {
       period: 3,
       teacher: "Dr. Patel",
       room: "302",
-      grade: 85.7,
-      letterGrade: "B",
-      assignments: [
-        {
-          name: "Lab Report: Titration",
-          type: "Labs",
-          date: "Nov 22, 2024",
-          dueDate: "Nov 29, 2024",
-          score: "91 out of 100",
-          points: "91/100",
-          notes: "",
-        },
-        {
-          name: "Chapter 8 Test",
-          type: "Tests",
-          date: "Dec 2, 2024",
-          dueDate: "Dec 2, 2024",
-          score: "82 out of 100",
-          points: "82/100",
-          notes: "",
-        },
-        {
-          name: "Homework 14",
-          type: "Homework",
-          date: "Dec 5, 2024",
-          dueDate: "Dec 9, 2024",
-          score: "18 out of 20",
-          points: "18/20",
-          notes: "",
-        },
+      grade: shiftedGrades[2],
+      letterGrade: letterFromGrade(shiftedGrades[2]),
+      assignments: periodIndex === 1 ? [
+        { name: "Lab Report: Acid-Base", type: "Labs", date: "Feb 15, 2024", dueDate: "Feb 22, 2024", score: "94 out of 100", points: "94/100", notes: "" },
+        { name: "Chapter 3 Test", type: "Tests", date: "Mar 8, 2024", dueDate: "Mar 8, 2024", score: "88 out of 100", points: "88/100", notes: "" },
+      ] : [
+        { name: "Lab Report: Titration", type: "Labs", date: "Nov 22, 2024", dueDate: "Nov 29, 2024", score: "91 out of 100", points: "91/100", notes: "" },
+        { name: "Chapter 8 Test", type: "Tests", date: "Dec 2, 2024", dueDate: "Dec 2, 2024", score: "82 out of 100", points: "82/100", notes: "" },
+        { name: "Homework 14", type: "Homework", date: "Dec 5, 2024", dueDate: "Dec 9, 2024", score: "18 out of 20", points: "18/20", notes: "" },
       ],
       categories: [
-        { name: "Tests", weight: 45, score: 85, points: "382/450" },
-        { name: "Labs", weight: 35, score: 91, points: "318/350" },
+        { name: "Tests", weight: 45, score: clampGrade(85 + (offsets[2] ?? 0)), points: "382/450" },
+        { name: "Labs", weight: 35, score: clampGrade(91 + (offsets[2] ?? 0)), points: "318/350" },
         { name: "Homework", weight: 20, score: 82, points: "164/200" },
       ],
     },
@@ -921,40 +885,19 @@ function generateDemoData() {
       period: 4,
       teacher: "Mrs. Johnson",
       room: "210",
-      grade: 94.2,
-      letterGrade: "A",
-      assignments: [
-        {
-          name: "Civil War Essay",
-          type: "Essays",
-          date: "Nov 15, 2024",
-          dueDate: "Nov 22, 2024",
-          score: "96 out of 100",
-          points: "96/100",
-          notes: "Excellent research",
-        },
-        {
-          name: "Chapter 12 Test",
-          type: "Tests",
-          date: "Dec 1, 2024",
-          dueDate: "Dec 1, 2024",
-          score: "93 out of 100",
-          points: "93/100",
-          notes: "",
-        },
-        {
-          name: "Document Analysis",
-          type: "Projects",
-          date: "Dec 8, 2024",
-          dueDate: "Dec 15, 2024",
-          score: "Not Graded",
-          points: "0/50",
-          notes: "",
-        },
+      grade: shiftedGrades[3],
+      letterGrade: letterFromGrade(shiftedGrades[3]),
+      assignments: periodIndex === 1 ? [
+        { name: "Reconstruction Essay", type: "Essays", date: "Mar 3, 2024", dueDate: "Mar 10, 2024", score: "93 out of 100", points: "93/100", notes: "" },
+        { name: "Chapter 7 Test", type: "Tests", date: "Mar 18, 2024", dueDate: "Mar 18, 2024", score: "92 out of 100", points: "92/100", notes: "" },
+      ] : [
+        { name: "Civil War Essay", type: "Essays", date: "Nov 15, 2024", dueDate: "Nov 22, 2024", score: "96 out of 100", points: "96/100", notes: "Excellent research" },
+        { name: "Chapter 12 Test", type: "Tests", date: "Dec 1, 2024", dueDate: "Dec 1, 2024", score: "93 out of 100", points: "93/100", notes: "" },
+        { name: "Document Analysis", type: "Projects", date: "Dec 8, 2024", dueDate: "Dec 15, 2024", score: "Not Graded", points: "0/50", notes: "" },
       ],
       categories: [
-        { name: "Tests", weight: 40, score: 93, points: "372/400" },
-        { name: "Essays", weight: 30, score: 96, points: "288/300" },
+        { name: "Tests", weight: 40, score: clampGrade(93 + (offsets[3] ?? 0)), points: "372/400" },
+        { name: "Essays", weight: 30, score: clampGrade(96 + (offsets[3] ?? 0)), points: "288/300" },
         { name: "Projects", weight: 20, score: 92, points: "184/200" },
         { name: "Participation", weight: 10, score: 98, points: "98/100" },
       ],
@@ -965,40 +908,19 @@ function generateDemoData() {
       period: 5,
       teacher: "Sra. Martinez",
       room: "115",
-      grade: 91.8,
-      letterGrade: "A-",
-      assignments: [
-        {
-          name: "Oral Presentation",
-          type: "Speaking",
-          date: "Nov 28, 2024",
-          dueDate: "Nov 28, 2024",
-          score: "95 out of 100",
-          points: "95/100",
-          notes: "Great pronunciation!",
-        },
-        {
-          name: "Writing Assignment 5",
-          type: "Writing",
-          date: "Dec 3, 2024",
-          dueDate: "Dec 6, 2024",
-          score: "88 out of 100",
-          points: "88/100",
-          notes: "",
-        },
-        {
-          name: "Vocabulary Quiz Ch. 7",
-          type: "Quizzes",
-          date: "Dec 9, 2024",
-          dueDate: "Dec 9, 2024",
-          score: "18 out of 20",
-          points: "18/20",
-          notes: "",
-        },
+      grade: shiftedGrades[4],
+      letterGrade: letterFromGrade(shiftedGrades[4]),
+      assignments: periodIndex === 1 ? [
+        { name: "Oral Presentation 1", type: "Speaking", date: "Feb 22, 2024", dueDate: "Feb 22, 2024", score: "90 out of 100", points: "90/100", notes: "" },
+        { name: "Writing Assignment 2", type: "Writing", date: "Mar 7, 2024", dueDate: "Mar 11, 2024", score: "93 out of 100", points: "93/100", notes: "" },
+      ] : [
+        { name: "Oral Presentation", type: "Speaking", date: "Nov 28, 2024", dueDate: "Nov 28, 2024", score: "95 out of 100", points: "95/100", notes: "Great pronunciation!" },
+        { name: "Writing Assignment 5", type: "Writing", date: "Dec 3, 2024", dueDate: "Dec 6, 2024", score: "88 out of 100", points: "88/100", notes: "" },
+        { name: "Vocabulary Quiz Ch. 7", type: "Quizzes", date: "Dec 9, 2024", dueDate: "Dec 9, 2024", score: "18 out of 20", points: "18/20", notes: "" },
       ],
       categories: [
-        { name: "Speaking", weight: 30, score: 94, points: "282/300" },
-        { name: "Writing", weight: 30, score: 90, points: "270/300" },
+        { name: "Speaking", weight: 30, score: clampGrade(94 + (offsets[4] ?? 0)), points: "282/300" },
+        { name: "Writing", weight: 30, score: clampGrade(90 + (offsets[4] ?? 0)), points: "270/300" },
         { name: "Quizzes", weight: 25, score: 91, points: "227/250" },
         { name: "Participation", weight: 15, score: 95, points: "142/150" },
       ],
@@ -1009,40 +931,19 @@ function generateDemoData() {
       period: 6,
       teacher: "Mr. Wilson",
       room: "305",
-      grade: 87.4,
-      letterGrade: "B+",
-      assignments: [
-        {
-          name: "Lab: Projectile Motion",
-          type: "Labs",
-          date: "Nov 20, 2024",
-          dueDate: "Nov 27, 2024",
-          score: "88 out of 100",
-          points: "88/100",
-          notes: "",
-        },
-        {
-          name: "Problem Set 10",
-          type: "Homework",
-          date: "Dec 2, 2024",
-          dueDate: "Dec 6, 2024",
-          score: "85 out of 100",
-          points: "85/100",
-          notes: "",
-        },
-        {
-          name: "Unit 4 Test",
-          type: "Tests",
-          date: "Dec 10, 2024",
-          dueDate: "Dec 10, 2024",
-          score: "Not Graded",
-          points: "0/100",
-          notes: "",
-        },
+      grade: shiftedGrades[5],
+      letterGrade: letterFromGrade(shiftedGrades[5]),
+      assignments: periodIndex === 1 ? [
+        { name: "Lab: Forces & Motion", type: "Labs", date: "Feb 19, 2024", dueDate: "Feb 26, 2024", score: "82 out of 100", points: "82/100", notes: "" },
+        { name: "Problem Set 4", type: "Homework", date: "Mar 4, 2024", dueDate: "Mar 8, 2024", score: "83 out of 100", points: "83/100", notes: "" },
+      ] : [
+        { name: "Lab: Projectile Motion", type: "Labs", date: "Nov 20, 2024", dueDate: "Nov 27, 2024", score: "88 out of 100", points: "88/100", notes: "" },
+        { name: "Problem Set 10", type: "Homework", date: "Dec 2, 2024", dueDate: "Dec 6, 2024", score: "85 out of 100", points: "85/100", notes: "" },
+        { name: "Unit 4 Test", type: "Tests", date: "Dec 10, 2024", dueDate: "Dec 10, 2024", score: "Not Graded", points: "0/100", notes: "" },
       ],
       categories: [
-        { name: "Tests", weight: 40, score: 86, points: "344/400" },
-        { name: "Labs", weight: 35, score: 89, points: "311/350" },
+        { name: "Tests", weight: 40, score: clampGrade(86 + (offsets[5] ?? 0)), points: "344/400" },
+        { name: "Labs", weight: 35, score: clampGrade(89 + (offsets[5] ?? 0)), points: "311/350" },
         { name: "Homework", weight: 25, score: 87, points: "217/250" },
       ],
     },
@@ -1055,15 +956,7 @@ function generateDemoData() {
       grade: 0,
       letterGrade: "N/A",
       assignments: [
-        {
-          name: "Attendance Check",
-          type: "Participation",
-          date: "Dec 1, 2024",
-          dueDate: "Dec 1, 2024",
-          score: "Not Graded",
-          points: "",
-          notes: "",
-        },
+        { name: "Attendance Check", type: "Participation", date: periodIndex === 1 ? "Mar 1, 2024" : "Dec 1, 2024", dueDate: periodIndex === 1 ? "Mar 1, 2024" : "Dec 1, 2024", score: "Not Graded", points: "", notes: "" },
       ],
       categories: [],
     },
@@ -1071,11 +964,7 @@ function generateDemoData() {
 
   return {
     courses,
-    reportingPeriod: {
-      name: "Fall Semester 2024",
-      startDate: "Aug 26, 2024",
-      endDate: "Dec 20, 2024",
-    },
+    reportingPeriod: periodMeta,
     reportingPeriods: [
       { name: "Fall Semester 2024", startDate: "Aug 26, 2024", endDate: "Dec 20, 2024" },
       { name: "Spring Semester 2024", startDate: "Jan 8, 2024", endDate: "May 24, 2024" },
