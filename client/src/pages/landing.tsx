@@ -196,8 +196,10 @@ export default function LandingPage() {
             Your grades, actually readable.
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            GradeVue 2 is a full replacement for StudentVue — faster, cleaner, and built by someone who
-            was frustrated enough to do something about it.
+            A beautiful, full-fledged replacement for StudentVue, Enhanced by AI.
+          </p>
+          <p className="mt-1 text-sm font-medium text-primary/70 tracking-wide uppercase">
+            By students, for students
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="gap-2" onClick={() => navigate("/login")} data-testid="button-hero-signin">
@@ -212,21 +214,24 @@ export default function LandingPage() {
           </p>
         </section>
 
-        <section className="border-y border-border/40 bg-muted/30 px-6 py-4">
-          <div className="mx-auto max-w-4xl flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground">
+        <section className="border-y border-border/40 bg-muted/30 px-6 py-6">
+          <div className="mx-auto max-w-4xl flex flex-wrap justify-center gap-2.5">
             {[
-              "Dashboard & GPA",
-              "What-If Mode",
-              "Course Details",
-              "AI Summaries",
-              "Attendance",
-              "Deadlines",
-              "Messages",
-              "GPA Calculator",
-            ].map((item) => (
-              <span key={item} className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-                {item}
+              { icon: <LayoutDashboard className="h-3.5 w-3.5" />, label: "See my GPA at a glance" },
+              { icon: <FlaskConical className="h-3.5 w-3.5" />, label: "Run what-if scenarios" },
+              { icon: <BookOpen className="h-3.5 w-3.5" />, label: "Break down each course" },
+              { icon: <Sparkles className="h-3.5 w-3.5" />, label: "Get AI-powered insights" },
+              { icon: <CalendarCheck className="h-3.5 w-3.5" />, label: "Track my attendance" },
+              { icon: <Clock className="h-3.5 w-3.5" />, label: "Never miss a deadline" },
+              { icon: <MessageSquare className="h-3.5 w-3.5" />, label: "Read school messages" },
+              { icon: <Calculator className="h-3.5 w-3.5" />, label: "Calculate my GPA" },
+            ].map(({ icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary/80 shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/20 hover:text-primary"
+              >
+                {icon}
+                {label}
               </span>
             ))}
           </div>
