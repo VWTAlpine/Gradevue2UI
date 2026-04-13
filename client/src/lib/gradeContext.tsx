@@ -342,6 +342,17 @@ export function GradeProvider({ children }: { children: ReactNode }) {
 
     if (credentials.district === "demo") {
       setSelectedPeriodIndex(index);
+      if (gradebook?.reportingPeriods && gradebook.reportingPeriods[index]) {
+        const period = gradebook.reportingPeriods[index];
+        setGradebookState({
+          ...gradebook,
+          reportingPeriod: {
+            name: period.name,
+            startDate: period.startDate,
+            endDate: period.endDate,
+          },
+        });
+      }
       return;
     }
 
