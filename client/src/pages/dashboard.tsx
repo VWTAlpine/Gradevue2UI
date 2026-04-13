@@ -4,6 +4,13 @@ import { GradeCard } from "@/components/grade-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TrendingUp, TrendingDown, BookOpen, Bell, X, Calendar, AlertTriangle, Loader2, BrainCircuit, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
@@ -155,23 +162,24 @@ export default function DashboardPage() {
       </div>
 
       {reportingPeriods.length > 1 && (
-        <div className="flex flex-wrap gap-2" data-testid="period-selector">
-          {reportingPeriods.map((period, idx) => (
-            <Button
-              key={period.name || idx}
-              variant={selectedPeriodIndex === idx ? "default" : "outline"}
-              size="sm"
-              onClick={() => switchReportingPeriod(idx)}
-              disabled={isLoading}
-              className="gap-1.5"
-              data-testid={`button-period-${idx}`}
-            >
-              {isLoading && selectedPeriodIndex === idx && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              {period.name}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2" data-testid="period-selector">
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <Select
+            value={selectedPeriodIndex.toString()}
+            onValueChange={(val) => switchReportingPeriod(parseInt(val))}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-56" data-testid="select-period-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {reportingPeriods.map((period, idx) => (
+                <SelectItem key={period.name || idx} value={idx.toString()} data-testid={`option-period-${idx}`}>
+                  {period.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 

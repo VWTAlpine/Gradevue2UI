@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getGradeBgColor, getGradeColor } from "@shared/schema";
-import { getBarColorFromLetter } from "@/lib/grade-utils";
+import { getBarColorFromLetter, isCourseUngraded } from "@/lib/grade-utils";
 import { List, BarChart3, ChevronDown, ChevronRight, FlaskConical, FileText, Plus, X, Loader2 } from "lucide-react";
 import {
   Select,
@@ -39,6 +39,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ReferenceLine,
 } from "recharts";
 
 type ViewMode = "list" | "chart";
@@ -91,12 +92,20 @@ export default function AssignmentsPage() {
   };
 
   const chartData = useMemo(() => {
-    return courses.map((course) => ({
+    return courses.map((course, idx) => ({
       name: course.name.length > 15 ? course.name.substring(0, 15) + "..." : course.name,
       fullName: course.name,
       grade: course.grade ?? 0,
       letterGrade: course.letterGrade,
+      courseIndex: idx,
     }));
+  }, [courses]);
+
+  const chartAverageGrade = useMemo(() => {
+    const graded = courses.filter((c) => c.grade !== null && !isCourseUngraded(c));
+    if (graded.length === 0) return null;
+    const sum = graded.reduce((acc, c) => acc + (c.grade ?? 0), 0);
+    return sum / graded.length;
   }, [courses]);
 
 
@@ -204,23 +213,24 @@ export default function AssignmentsPage() {
       )}
 
       {reportingPeriods.length > 1 && (
-        <div className="flex flex-wrap gap-2" data-testid="period-selector">
-          {reportingPeriods.map((period, idx) => (
-            <Button
-              key={period.name || idx}
-              variant={selectedPeriodIndex === idx ? "default" : "outline"}
-              size="sm"
-              onClick={() => switchReportingPeriod(idx)}
-              disabled={isLoading}
-              className="gap-1.5"
-              data-testid={`button-period-${idx}`}
-            >
-              {isLoading && selectedPeriodIndex === idx && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              {period.name}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2" data-testid="period-selector">
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <Select
+            value={selectedPeriodIndex.toString()}
+            onValueChange={(val) => switchReportingPeriod(parseInt(val))}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-56" data-testid="select-period-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {reportingPeriods.map((period, idx) => (
+                <SelectItem key={period.name || idx} value={idx.toString()} data-testid={`option-period-${idx}`}>
+                  {period.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -441,11 +451,27 @@ export default function AssignmentsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {chartData.length === 0 ? (
+              <div className="flex h-80 flex-col items-center justify-center gap-3 text-center" data-testid="chart-empty-state">
+                <BarChart3 className="h-12 w-12 text-muted-foreground" />
+                <h3 className="text-lg font-medium">No course data available</h3>
+                <p className="text-sm text-muted-foreground">
+                  Grade data will appear here once your courses are loaded
+                </p>
+              </div>
+            ) : (
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={chartData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  style={{ cursor: "pointer" }}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload.length > 0) {
+                      const entry = data.activePayload[0].payload;
+                      setLocation(`/course/${entry.courseIndex}`);
+                    }
+                  }}
                 >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis
@@ -471,12 +497,27 @@ export default function AssignmentsPage() {
                             <p className="text-sm text-muted-foreground">
                               Grade: {data.grade.toFixed(1)}% ({data.letterGrade})
                             </p>
+                            <p className="text-xs text-muted-foreground mt-1">Click to view course</p>
                           </div>
                         );
                       }
                       return null;
                     }}
                   />
+                  {chartAverageGrade !== null && (
+                    <ReferenceLine
+                      y={chartAverageGrade}
+                      stroke="#f59e0b"
+                      strokeDasharray="6 3"
+                      label={{
+                        value: `Avg: ${chartAverageGrade.toFixed(1)}%`,
+                        position: "insideTopRight",
+                        fontSize: 12,
+                        fill: "#f59e0b",
+                      }}
+                      data-testid="chart-reference-line"
+                    />
+                  )}
                   <Bar dataKey="grade" radius={[4, 4, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell
@@ -488,6 +529,7 @@ export default function AssignmentsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            )}
           </CardContent>
         </Card>
       )}
